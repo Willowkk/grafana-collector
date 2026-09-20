@@ -1,0 +1,31 @@
+{
+  "pass": true,
+  "audited_at": "2026-09-20T07:04:16.804908+00:00",
+  "generation": "20260920T070356-be9407e75776",
+  "source_run": "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/runs/sdkv2_20260914_1500_2100",
+  "manifest": "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/outputs/sdkv2_parquet_20260914_1500_2100/manifest.json",
+  "panels": 204,
+  "series": 4053,
+  "source_points": 206492,
+  "exported_points": 206492,
+  "numeric_points": 197808,
+  "explicit_nulls": 8684,
+  "panel_statuses": {
+    "success": 65,
+    "empty": 139
+  },
+  "units": {
+    "reqps": 370,
+    "µs": 3332,
+    "percentunit": 132,
+    "short": 146,
+    "binBps": 21,
+    "kbytes": 48,
+    "none": 4
+  },
+  "compression": [
+    "ZSTD"
+  ],
+  "failure_count": 0,
+  "failures": []
+}

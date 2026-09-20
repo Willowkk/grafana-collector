@@ -1,0 +1,97 @@
+{
+  "reference_directory": "/Users/bytedance/Downloads/data.inf.hdfs_dancedn_seed_qa_test_dn",
+  "files": 143,
+  "styles": [
+    {
+      "header_fill": "None",
+      "bold": true,
+      "date_format": "yyyy-mm-dd h:mm:ss",
+      "count": 142
+    },
+    {
+      "header_fill": "None",
+      "bold": false,
+      "date_format": "m/d/yy h:mm",
+      "count": 1
+    }
+  ],
+  "files_with_irregular_timestamps": 58,
+  "examples": [
+    {
+      "file": "ByteRPC 性能指标总览/server total time latency-data-export.xlsx",
+      "time_rows": 1876,
+      "gaps_seconds": {
+        "30.0": 1801,
+        "90.0": 9,
+        "60.0": 27,
+        "330.0": 2,
+        "120.0": 6,
+        "810.0": 1,
+        "360.0": 2,
+        "600.0": 2,
+        "510.0": 2,
+        "2970.0": 1,
+        "1200.0": 1,
+        "1140.0": 1,
+        "150.0": 6,
+        "1530.0": 1,
+        "2520.0": 1,
+        "210.0": 2,
+        "240.0": 1,
+        "300.0": 2,
+        "480.0": 1,
+        "960.0": 1,
+        "3480.0": 1,
+        "1080.0": 1,
+        "180.0": 1,
+        "5130.0": 1,
+        "1950.0": 1
+      }
+    },
+    {
+      "file": "ByteRPC 性能指标总览/server user service latency-data-export.xlsx",
+      "time_rows": 216,
+      "gaps_seconds": {
+        "300.0": 198,
+        "600.0": 7,
+        "3000.0": 1,
+        "1200.0": 4,
+        "1500.0": 1,
+        "2700.0": 1,
+        "3300.0": 1,
+        "5100.0": 1,
+        "2100.0": 1
+      }
+    },
+    {
+      "file": "ByteRPC 性能指标总览/server wait deserialize req latency-data-export.xlsx",
+      "time_rows": 216,
+      "gaps_seconds": {
+        "300.0": 198,
+        "600.0": 7,
+        "3000.0": 1,
+        "1200.0": 4,
+        "1500.0": 1,
+        "2700.0": 1,
+        "3300.0": 1,
+        "5100.0": 1,
+        "2100.0": 1
+      }
+    },
+    {
+      "file": "ByteRPC 性能指标总览/server wait send resp latency-data-export.xlsx",
+      "time_rows": 216,
+      "gaps_seconds": {
+        "300.0": 198,
+        "600.0": 7,
+        "3000.0": 1,
+        "1200.0": 4,
+        "1500.0": 1,
+        "2700.0": 1,
+        "3300.0": 1,
+        "5100.0": 1,
+        "2100.0": 1
+      }
+    }
+  ]
+}

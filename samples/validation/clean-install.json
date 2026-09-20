@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "started_at": "2026-09-17T12:14:03.094030+00:00",
+  "wheel": "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/dist/sdkv2_grafana_collector-0.1.0-py3-none-any.whl",
+  "wheel_sha256": "1746663a3fb401e16fcad8b6d8c573f02f945f5fef815a62c790b286b8b38892",
+  "previous_validated_wheel_sha256": "377c71a3cc12818bb4d69cd58790fb1e3bf98865cd56dfef2cf005e5d783f27e",
+  "installation_mode": "final wheel into new Python 3.11 venv; not editable",
+  "source_checkout_available_on_pythonpath": false,
+  "browser_started": false,
+  "pass": true,
+  "commands": [
+    {
+      "label": "Create final clean Python 3.11 environment",
+      "argv": [
+        "/opt/homebrew/bin/python3.11",
+        "-m",
+        "venv",
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/venv"
+      ],
+      "cwd": "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/working",
+      "exit_code": 0,
+      "elapsed_seconds": 4.143
+    },
+    {
+      "label": "Install final wheel and declared dependencies",
+      "argv": [
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/venv/bin/python",
+        "-m",
+        "pip",
+        "install",
+        "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/dist/sdkv2_grafana_collector-0.1.0-py3-none-any.whl"
+      ],
+      "cwd": "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/working",
+      "exit_code": 0,
+      "elapsed_seconds": 4.108
+    },
+    {
+      "label": "Final installed CLI version",
+      "argv": [
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/venv/bin/grafana-collector",
+        "--version"
+      ],
+      "cwd": "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/working",
+      "exit_code": 0,
+      "elapsed_seconds": 1.202
+    },
+    {
+      "label": "Final installed CLI help",
+      "argv": [
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/venv/bin/grafana-collector",
+        "--help"
+      ],
+      "cwd": "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/working",
+      "exit_code": 0,
+      "elapsed_seconds": 0.104
+    },
+    {
+      "label": "Final inspect command help",
+      "argv": [
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/venv/bin/grafana-collector",
+        "inspect",
+        "--help"
+      ],
+      "cwd": "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/working",
+      "exit_code": 0,
+      "elapsed_seconds": 0.097
+    },
+    {
+      "label": "Inspect final package origin",
+      "argv": [
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/venv/bin/python",
+        "-c",
+        "import json,sys,grafana_collector; from importlib import metadata; d=metadata.distribution('sdkv2-grafana-collector'); print(json.dumps({'python':sys.version,'executable':sys.executable,'module_file':grafana_collector.__file__,'sys_path':sys.path,'direct_url':json.loads(d.read_text('direct_url.json')),'dependencies':{p:metadata.version(p) for p in ['sdkv2-grafana-collector','playwright','openpyxl']}}))"
+      ],
+      "cwd": "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/working",
+      "exit_code": 0,
+      "elapsed_seconds": 0.146
+    },
+    {
+      "label": "Final wheel offline export panel 166",
+      "argv": [
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/venv/bin/grafana-collector",
+        "export",
+        "--run",
+        "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/runs/sdkv2_20260914_1500_2100",
+        "--out",
+        "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/runs/validation/clean-install-export",
+        "--panels",
+        "166"
+      ],
+      "cwd": "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/working",
+      "exit_code": 0,
+      "elapsed_seconds": 1.53
+    },
+    {
+      "label": "Verify final-wheel Excel against SQLite",
+      "argv": [
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/venv/bin/python",
+        "-c",
+        "import json,sqlite3,math\nfrom pathlib import Path\nfrom datetime import datetime\nfrom zoneinfo import ZoneInfo\nfrom openpyxl import load_workbook\nrun=Path(\"/Users/bytedance/00_projects/IO_Pattern/grafana_collector/runs/sdkv2_20260914_1500_2100\"); out=Path(\"/Users/bytedance/00_projects/IO_Pattern/grafana_collector/runs/validation/clean-install-export\")\nm=json.loads((out/\"manifest.json\").read_text()); assert len(m[\"panels\"])==1; p=m[\"panels\"][0]; assert p[\"panel_id\"]==166 and p[\"status\"]==\"success\" and p[\"range_status\"]==\"covered\" and len(p[\"files\"])==1\nf=p[\"files\"][0]; con=sqlite3.connect(\"file:\"+str(run/\"collection.sqlite3\")+\"?mode=ro\",uri=True); points={sid:{r[0]:json.loads(r[1]) for r in con.execute(\"SELECT timestamp_ms,value_json FROM points WHERE series_id=?\",(sid,))} for sid in f[\"series_ids\"]}; b=load_workbook(out/f[\"path\"],read_only=True,data_only=False); assert b.sheetnames==[\"Sheet1\"]; rows=b.active.iter_rows(max_col=len(f[\"series_ids\"])+1); assert [c.value for c in next(rows)]==[\"Time\",*f[\"columns\"]]\nnumeric=blank=row_count=0; ts=[]; unique=set(); sh=ZoneInfo(\"Asia/Shanghai\")\nfor row in rows:\n row_count+=1; assert isinstance(row[0].value,datetime) and row[0].is_date and row[0].data_type==\"d\"; t=int(round(row[0].value.replace(tzinfo=sh).timestamp()*1000)); ts.append(t)\n for col,sid in enumerate(f[\"series_ids\"],1):\n  value=points[sid].get(t); actual=row[col].value\n  if value is None: assert actual is None; blank+=1\n  else: assert row[col].data_type==\"n\" and math.isclose(actual,value,rel_tol=1e-14,abs_tol=1e-12); numeric+=1\n  if t in points[sid]: unique.add((sid,t))\nassert ts==sorted({t for s in points.values() for t in s}); assert row_count==f[\"row_count\"]; assert len(unique)==sum(len(v) for v in points.values()); b.close(); con.close(); print(json.dumps({\"pass\":True,\"manifest\":str(out/\"manifest.json\"),\"xlsx\":str(out/f[\"path\"]),\"panel_id\":166,\"status\":p[\"status\"],\"range_status\":p[\"range_status\"],\"rows\":row_count,\"series\":len(f[\"series_ids\"]),\"numeric_cells\":numeric,\"blank_cells\":blank,\"sqlite_points_verified\":len(unique),\"single_sheet\":True,\"excel_dates\":True,\"numeric_types\":True,\"exact_timestamp_union\":True,\"missing_cells_are_blank\":True}))"
+      ],
+      "cwd": "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/working",
+      "exit_code": 0,
+      "elapsed_seconds": 0.188
+    }
+  ],
+  "temporary_working_directory": "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/working",
+  "version_output": "0.1.0",
+  "installed_environment": {
+    "python": "3.11.16 (main, Aug 12 2026, 23:03:19) [Clang 21.0.0 (clang-2100.1.1.101)]",
+    "executable": "/private/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/venv/bin/python",
+    "module_file": "/private/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/venv/lib/python3.11/site-packages/grafana_collector/__init__.py",
+    "sys_path": [
+      "",
+      "/opt/homebrew/Cellar/python@3.11/3.11.16/Frameworks/Python.framework/Versions/3.11/lib/python311.zip",
+      "/opt/homebrew/Cellar/python@3.11/3.11.16/Frameworks/Python.framework/Versions/3.11/lib/python3.11",
+      "/opt/homebrew/Cellar/python@3.11/3.11.16/Frameworks/Python.framework/Versions/3.11/lib/python3.11/lib-dynload",
+      "/private/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-final-wheel-acceptance-bbkpitmq/venv/lib/python3.11/site-packages"
+    ],
+    "direct_url": {
+      "archive_info": {
+        "hash": "sha256=1746663a3fb401e16fcad8b6d8c573f02f945f5fef815a62c790b286b8b38892",
+        "hashes": {
+          "sha256": "1746663a3fb401e16fcad8b6d8c573f02f945f5fef815a62c790b286b8b38892"
+        }
+      },
+      "url": "file:///Users/bytedance/00_projects/IO_Pattern/grafana_collector/dist/sdkv2_grafana_collector-0.1.0-py3-none-any.whl"
+    },
+    "dependencies": {
+      "sdkv2-grafana-collector": "0.1.0",
+      "playwright": "1.63.0",
+      "openpyxl": "3.1.5"
+    }
+  },
+  "export_verification": {
+    "pass": true,
+    "manifest": "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/runs/validation/clean-install-export/manifest.json",
+    "xlsx": "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/runs/validation/clean-install-export/exports/20260917T121414-679561377fe3/IO/Throughput [166].xlsx",
+    "panel_id": 166,
+    "status": "success",
+    "range_status": "covered",
+    "rows": 51,
+    "series": 11,
+    "numeric_cells": 52,
+    "blank_cells": 509,
+    "sqlite_points_verified": 52,
+    "single_sheet": true,
+    "excel_dates": true,
+    "numeric_types": true,
+    "exact_timestamp_union": true,
+    "missing_cells_are_blank": true
+  },
+  "temporary_environment_removed": true,
+  "completed_at": "2026-09-17T12:14:15.170470+00:00",
+  "log": "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/runs/validation/clean-install.log"
+}

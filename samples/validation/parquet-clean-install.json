@@ -1,0 +1,62 @@
+{
+  "pass": true,
+  "python": "3.11",
+  "clean_environment": "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-v020-clean-__m0xsp9",
+  "results": [
+    {
+      "command": [
+        "python3.11",
+        "-m",
+        "venv",
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-v020-clean-__m0xsp9"
+      ],
+      "returncode": 0
+    },
+    {
+      "command": [
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-v020-clean-__m0xsp9/bin/python",
+        "-m",
+        "pip",
+        "install",
+        "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/dist/sdkv2_grafana_collector-0.2.0-py3-none-any.whl"
+      ],
+      "returncode": 0
+    },
+    {
+      "command": [
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-v020-clean-__m0xsp9/bin/python",
+        "-I",
+        "-m",
+        "grafana_collector",
+        "--version"
+      ],
+      "returncode": 0
+    },
+    {
+      "command": [
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-v020-clean-__m0xsp9/bin/python",
+        "-I",
+        "-m",
+        "grafana_collector",
+        "export",
+        "--run",
+        "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/runs/sdkv2_20260914_1500_2100",
+        "--out",
+        "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/runs/validation/parquet-clean-export"
+      ],
+      "returncode": 0
+    },
+    {
+      "command": [
+        "/var/folders/0b/t4l63c6x7sb8bm74hp3_j6_00000gn/T/grafana-v020-clean-__m0xsp9/bin/python",
+        "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/examples/read_parquet.py",
+        "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/samples/parquet_20260914_1500_2100",
+        "--panel",
+        "166",
+        "--limit",
+        "1"
+      ],
+      "returncode": 0
+    }
+  ]
+}

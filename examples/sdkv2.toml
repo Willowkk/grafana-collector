@@ -1,0 +1,20 @@
+# URL 建议整体复制，保留 var-* 查询条件；时间默认按 Asia/Shanghai 解读。
+url = "https://grafana.byted.org/d/inyUtsTSk/inf-cfs-client-sdkv2?orgId=1&from=1789369200000&to=1789390800000&var-prefix=inf.cfs.client.sdkv2&var-datasource=bytetsd&var-env=*&var-region=*&var-filesystem=cfs_echo_hl_qa_fs&var-namespace=All&var-task_id=All&var-api=All&var-nn_rpc=All&var-dn_rpc=All&var-rs_rpc=All&var-delegated_rs_rpc=All&var-dancedn_rpc=All&var-preload_rpc=All&var-dancedn_backend_rpc=All"
+timeout = 30
+login_timeout = 600
+concurrency = 4
+retries = 3
+format = "parquet" # fetch/watch/export 的默认格式；人工查看可改为 xlsx
+
+[fetch]
+out = "runs/history"
+
+[watch]
+out = "runs/live"
+poll_interval = "5m"
+lookback = "5m"
+# since = "2026-09-17T10:00:00+08:00"  # 只有显式指定才补采启动前的历史
+
+[export]
+run = "runs/live"
+out = "runs/live"

@@ -1,0 +1,1275 @@
+{
+  "generated_at_utc": "2026-09-17T12:15:35.688581+00:00",
+  "run": "/Users/bytedance/00_projects/IO_Pattern/grafana_collector/runs/sdkv2_20260914_1500_2100",
+  "method": "Independent Python standard library decoding; collector compiler/parser/render/storage APIs are not imported.",
+  "range_ms": [
+    1789369200000,
+    1789390800000
+  ],
+  "dashboard_version": 319,
+  "database_counts": {
+    "queries": 474,
+    "attempts": 469,
+    "series": 8106,
+    "points": 412984
+  },
+  "panel_states": {
+    "empty": 139,
+    "success": 65
+  },
+  "panels": [
+    {
+      "id": 150,
+      "title": "API QPS",
+      "queries": [
+        {
+          "ref_id": "A",
+          "kind": "opentsdb",
+          "key": "23939a5493b16446655618d08067a9c9c65cf008060aa9e80c3fd85e97605a41",
+          "state": "success",
+          "raw_path": "raw/e3e33cebad1d4917-0d3cef79c0d948e0964b7376559d5379.json.gz",
+          "raw_series_count": 123,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 5310,
+            "actual_points": 5310,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": 1789369200000,
+          "returned_timestamp_max_ms": 1789390740000,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [
+            "reqps"
+          ],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "reqps",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "4a45cbaa5c3106370ef878f52681fd549c35df0f373e7c84b9bd1193ae82a704",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 5310,
+            "actual_points": 5310,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": [
+            {
+              "capture_file": "ui-final-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": false,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 2.7755575615628914e-17,
+                "max_relative_difference": 1.6670015384762107e-16,
+                "expected_points": 5310,
+                "actual_points": 5310,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 6
+              }
+            },
+            {
+              "capture_file": "ui-more-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 5310,
+                "actual_points": 5310,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            },
+            {
+              "capture_file": "ui-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 5310,
+                "actual_points": 5310,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 138,
+      "title": "API Latency AVG",
+      "queries": [
+        {
+          "ref_id": "A",
+          "kind": "opentsdb",
+          "key": "ca3578741e26abe0275d9ef8cf63d820664ee2696f8077563f42639716e1c521",
+          "state": "success",
+          "raw_path": "raw/347a760a6a500dfc-6b976953e0e345feabc503978b2f801f.json.gz",
+          "raw_series_count": 122,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 5257,
+            "actual_points": 5257,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": 1789369200000,
+          "returned_timestamp_max_ms": 1789390740000,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [
+            "µs"
+          ],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "µs",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "8a035f044f004b20b8b165bde866cba1e8da6223c4fb5c8b994775294ad98425",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 5257,
+            "actual_points": 5257,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": [
+            {
+              "capture_file": "ui-final-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 5257,
+                "actual_points": 5257,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            },
+            {
+              "capture_file": "ui-more-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 5257,
+                "actual_points": 5257,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            },
+            {
+              "capture_file": "ui-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 5257,
+                "actual_points": 5257,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 605,
+      "title": "API Latency AVG - GROUPBY ID IP",
+      "queries": [
+        {
+          "ref_id": "A",
+          "kind": "opentsdb",
+          "key": "79d445ea6117b74201b5675b8a6c2436c58c2bd31c1b79a362e88cc5087f1cea",
+          "state": "success",
+          "raw_path": "raw/85145395a377b967-8a396969df3b491080172b62d9918bd9.json.gz",
+          "raw_series_count": 20,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 532,
+            "actual_points": 532,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": 1789369200000,
+          "returned_timestamp_max_ms": 1789390740000,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [
+            "µs"
+          ],
+          "topk": "top-20-max",
+          "expected_unit_from_dashboard_axes": "µs",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "b076c1d3a71af9702acf8ec271ee5f7b4f350fb3f09517c00947077a12d6ca5f",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 532,
+            "actual_points": 532,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": [
+            {
+              "capture_file": "ui-final-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 532,
+                "actual_points": 532,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            },
+            {
+              "capture_file": "ui-more-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 532,
+                "actual_points": 532,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            },
+            {
+              "capture_file": "ui-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 532,
+                "actual_points": 532,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 70,
+      "title": "API Fail Rate",
+      "queries": [
+        {
+          "ref_id": "A",
+          "kind": "bosun",
+          "key": "72c36e75e1045a5b98eec8ed34650da649dc5e2461c41f649985ab92729b30ac",
+          "state": "success",
+          "raw_path": "raw/e51fe6bb729c0e95-43ee23eea9d2422597c5d7c9b6300ac1.json.gz",
+          "raw_series_count": 132,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 13535,
+            "actual_points": 13535,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": 1789369200000,
+          "returned_timestamp_max_ms": 1789390800000,
+          "null_points": 8684,
+          "zero_points": 1,
+          "units": [
+            "percentunit"
+          ],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "percentunit",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "148466add73833c09885354e9f7354f27a558d3ab92c7f26e30295c7e1bbf757",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 13535,
+            "actual_points": 13535,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": [
+            {
+              "capture_file": "ui-final-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": false,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 2.220446049250313e-16,
+                "max_relative_difference": 2.2204460492503126e-16,
+                "expected_points": 13535,
+                "actual_points": 13535,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 6
+              }
+            },
+            {
+              "capture_file": "ui-more-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 13535,
+                "actual_points": 13535,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            },
+            {
+              "capture_file": "ui-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": false,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 2.220446049250313e-16,
+                "max_relative_difference": 2.220446049250313e-16,
+                "expected_points": 13535,
+                "actual_points": 13535,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 5
+              }
+            }
+          ],
+          "server_queries_diagnostic_ranges_seconds": [
+            [
+              1789642999,
+              1789646599
+            ]
+          ],
+          "diagnostic_ranges_match_requested": false,
+          "formula": "fail_qps / total_qps, evaluated by the Bosun server",
+          "formula_independent_operands_available": false
+        }
+      ]
+    },
+    {
+      "id": 416,
+      "title": "read IO retry time",
+      "queries": [
+        {
+          "ref_id": "A",
+          "kind": "opentsdb",
+          "key": "cf74fdadabdc781868e97e1a5542711ba0c9133699fc2076aad6c92d1f2706a8",
+          "state": "empty",
+          "raw_path": "raw/eb76e3794274cf15-e86e0da0cdd349c8932f2a6bae59cf10.json.gz",
+          "raw_series_count": 0,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 0,
+            "actual_points": 0,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": null,
+          "returned_timestamp_max_ms": null,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "ms",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "58a01efe5ab27e546f05db7d61b31d1c93cd88ad57169408657ffa6b88f38c95",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 0,
+            "actual_points": 0,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": [
+            {
+              "capture_file": "ui-final-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 0,
+                "actual_points": 0,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            },
+            {
+              "capture_file": "ui-more-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 0,
+                "actual_points": 0,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            },
+            {
+              "capture_file": "ui-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 0,
+                "actual_points": 0,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            }
+          ]
+        },
+        {
+          "ref_id": "B",
+          "kind": "opentsdb",
+          "key": "b03b85c52da5b20ba77f034c5b5252c69b7a5061c903cdd4a7de4f9a471a0bb2",
+          "state": "empty",
+          "raw_path": "raw/11e5f78643c0b8b0-c463aeebd5ac40d18d02dc3f39c4c065.json.gz",
+          "raw_series_count": 0,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 0,
+            "actual_points": 0,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": null,
+          "returned_timestamp_max_ms": null,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "ms",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "2042b541fd083acc25009f927b9efc04ebf32658586e3f49ebadd8ac7bdd4e78",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 0,
+            "actual_points": 0,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": [
+            {
+              "capture_file": "ui-final-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 0,
+                "actual_points": 0,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            },
+            {
+              "capture_file": "ui-more-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 0,
+                "actual_points": 0,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            },
+            {
+              "capture_file": "ui-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 0,
+                "actual_points": 0,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            }
+          ]
+        },
+        {
+          "ref_id": "C",
+          "kind": "opentsdb",
+          "key": "4b86ac2616f51208c0553a41b450d0230d7f631d1a2cbcc6cd12eec738aa83cc",
+          "state": "success",
+          "raw_path": "raw/5c3e4a1108116b57-604d04a7d76343c9a7837a0b3227a2e6.json.gz",
+          "raw_series_count": 1,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 4,
+            "actual_points": 4,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": 1789372500000,
+          "returned_timestamp_max_ms": 1789372740000,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [
+            "µs"
+          ],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "µs",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "3fb696ff87ca03c3b93460527b090a129a7fc653980a333039ee418ac0859496",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 4,
+            "actual_points": 4,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": [
+            {
+              "capture_file": "ui-final-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 4,
+                "actual_points": 4,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            },
+            {
+              "capture_file": "ui-more-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 4,
+                "actual_points": 4,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            },
+            {
+              "capture_file": "ui-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 4,
+                "actual_points": 4,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 166,
+      "title": "Throughput",
+      "queries": [
+        {
+          "ref_id": "B",
+          "kind": "opentsdb",
+          "key": "5da6c5209e06fa18bb6e9bb1612170ba3716a8b2a22e1db780e808b14f8073a1",
+          "state": "success",
+          "raw_path": "raw/5106a953e4b5eeba-791d30cfb16b4333a53e42a69ca3efcc.json.gz",
+          "raw_series_count": 11,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 52,
+            "actual_points": 52,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": 1789372500000,
+          "returned_timestamp_max_ms": 1789386780000,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [
+            "binBps"
+          ],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "binBps",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "fec090d7633d3033ba8b1b6ea242e7ca1ab609731fc6635ba78095ed066e1c3b",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 52,
+            "actual_points": 52,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": []
+        }
+      ]
+    },
+    {
+      "id": 199,
+      "title": "IO Size",
+      "queries": [
+        {
+          "ref_id": "A",
+          "kind": "opentsdb",
+          "key": "4cc84e2ecd1176a8f589917ee27e60c412026d9bd3edb7e2dcea9bc0ce1f6be6",
+          "state": "empty",
+          "raw_path": "raw/b651c6483ff92f1b-d3e11bbe1cba45a7a1c830cb6550791d.json.gz",
+          "raw_series_count": 0,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 0,
+            "actual_points": 0,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": null,
+          "returned_timestamp_max_ms": null,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "bytes",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "bb64698aff00e162ab5f7682a3ed4419d4f01c38124908d37f75d15246477eb2",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 0,
+            "actual_points": 0,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": []
+        },
+        {
+          "ref_id": "B",
+          "kind": "opentsdb",
+          "key": "dac7b2ce7d37fe6932260701bcdc9ce04fa7f8885cb06a77c9227a357b634511",
+          "state": "empty",
+          "raw_path": "raw/7faa012d5c60f51b-26fb9326237b43d0bbecfe2a0b0d63ce.json.gz",
+          "raw_series_count": 0,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 0,
+            "actual_points": 0,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": null,
+          "returned_timestamp_max_ms": null,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "bytes",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "68d578af71217aefed526b3ce521c0ec47edfbc3bd4870787b856261515e3c98",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 0,
+            "actual_points": 0,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": []
+        },
+        {
+          "ref_id": "G",
+          "kind": "opentsdb",
+          "key": "26dbea9af7822f17114b749bd008a4b16fe897f06ccf1c5c84a067af2d7dc87a",
+          "state": "success",
+          "raw_path": "raw/7822d71858663528-5adc7fccb71b4cbe8c05cbd5883c9925.json.gz",
+          "raw_series_count": 12,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 53,
+            "actual_points": 53,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": 1789372500000,
+          "returned_timestamp_max_ms": 1789386780000,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [
+            "kbytes"
+          ],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "kbytes",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "58fa3af5932ad481a0b17134739e682893dcfc93f8ff6dee84f83a028366e3ca",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 53,
+            "actual_points": 53,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": []
+        },
+        {
+          "ref_id": "H",
+          "kind": "opentsdb",
+          "key": "fbf350ffa0978e48f8682a9cc263bde98cc18a66719a9c42bbd08c2b845c5cad",
+          "state": "success",
+          "raw_path": "raw/ee92347dc94e1388-03f43fc7032b4b07a2d8dbfc3d1bef18.json.gz",
+          "raw_series_count": 12,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 52,
+            "actual_points": 52,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": 1789372500000,
+          "returned_timestamp_max_ms": 1789386780000,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [
+            "kbytes"
+          ],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "kbytes",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "264d27f48a1bce3b2ddfe9f54d74f8bea38fc6d8b9cc5c4c982fb37882a7a352",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 52,
+            "actual_points": 52,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": []
+        },
+        {
+          "ref_id": "I",
+          "kind": "opentsdb",
+          "key": "3dda63c04bfe4f1be985eb87ea43441a7dc7e9e5ca5cd44ae8399a9e5cb68300",
+          "state": "success",
+          "raw_path": "raw/85d2d8f80487f191-105a6da2bc4c4a98a397054d73a87307.json.gz",
+          "raw_series_count": 12,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 53,
+            "actual_points": 53,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": 1789372500000,
+          "returned_timestamp_max_ms": 1789386780000,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [
+            "kbytes"
+          ],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "kbytes",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "46442b31f9a04c7d9059c7a07fa44846894fc2cf811fef53d3ac225f82d6d686",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 53,
+            "actual_points": 53,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": []
+        },
+        {
+          "ref_id": "J",
+          "kind": "opentsdb",
+          "key": "8355ca41c689a3121cb1de87294289021ac51c70f16416e50222a8341ff00bc6",
+          "state": "success",
+          "raw_path": "raw/349f2218ae83cf11-516338e2da7843cb989209310db54c53.json.gz",
+          "raw_series_count": 12,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 52,
+            "actual_points": 52,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": 1789372500000,
+          "returned_timestamp_max_ms": 1789386780000,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [
+            "kbytes"
+          ],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "kbytes",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "67127ab6f3558dc94634cb903229ee10dfc6fe58361d37f45fd9b98730c3caf4",
+          "raw_to_display_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 52,
+            "actual_points": 52,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "grafana_ui_matches": []
+        }
+      ]
+    },
+    {
+      "id": 461,
+      "title": "MSet 成功率",
+      "queries": [
+        {
+          "ref_id": "A",
+          "kind": "opentsdb",
+          "key": "194c30d68f7e836f3018e6adaef9557fd4b582d36aa87e2b0f79300c87b0cdc0",
+          "state": "empty",
+          "raw_path": "raw/40be1cd25df46d83-56cbf3c95f674099aae56360e3a86c5b.json.gz",
+          "raw_series_count": 0,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 0,
+            "actual_points": 0,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": null,
+          "returned_timestamp_max_ms": null,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "percentunit",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "c4a91a0acbecc552acea02fc7f685b3fd71c3108be685c7a130e561ec5629304",
+          "grafana_ui_matches": [
+            {
+              "capture_file": "ui-final-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 0,
+                "actual_points": 0,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            }
+          ]
+        },
+        {
+          "ref_id": "B",
+          "kind": "opentsdb",
+          "key": "e56a290d02cf169517e719dcde09a4deb3ac43bd45b3c979d64a0ca1ed8f0d44",
+          "state": "empty",
+          "raw_path": "raw/24dfff566e05fd96-cb6574f8315948debaed74a41b22bb01.json.gz",
+          "raw_series_count": 0,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 0,
+            "actual_points": 0,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": null,
+          "returned_timestamp_max_ms": null,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "percentunit",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "b37354eef862adf8523c63c887084680e0acfb32b1af1f4a4ea6ea94b9495094",
+          "grafana_ui_matches": [
+            {
+              "capture_file": "ui-final-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 0,
+                "actual_points": 0,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            }
+          ]
+        }
+      ],
+      "transformation": {
+        "definition": [
+          {
+            "id": "calculateField",
+            "options": {
+              "alias": "成功率",
+              "binary": {
+                "left": "success",
+                "operator": "/",
+                "reducer": "sum",
+                "right": "total"
+              },
+              "mode": "binary",
+              "reduce": {
+                "reducer": "sum"
+              },
+              "replaceFields": true
+            }
+          }
+        ],
+        "display_points": 0,
+        "live_formula_verified": false,
+        "reason": "Both real network inputs are empty in this historical filesystem/time range; no live ratio values exist. Synthetic tests validate division, nulls and replacement behavior."
+      }
+    },
+    {
+      "id": 462,
+      "title": "MGet 成功率",
+      "queries": [
+        {
+          "ref_id": "A",
+          "kind": "opentsdb",
+          "key": "47889163371e99cd2b906e5b225b425d35d2474cecac9fc50fa507c9f924815f",
+          "state": "empty",
+          "raw_path": "raw/f52aee5b6b228ee5-4b09832ce29244dbb40298c2c9a48539.json.gz",
+          "raw_series_count": 0,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 0,
+            "actual_points": 0,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": null,
+          "returned_timestamp_max_ms": null,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "percentunit",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "ffd4dd6b1db8c83cd5bd325a5a194b7aa6825084c918ddfab01078d8743f23d4",
+          "grafana_ui_matches": [
+            {
+              "capture_file": "ui-final-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 0,
+                "actual_points": 0,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            }
+          ]
+        },
+        {
+          "ref_id": "B",
+          "kind": "opentsdb",
+          "key": "8260e4c699ddaf5348a3f3baa365649b6c1af6ed691bf46333e7af996ea7c602",
+          "state": "empty",
+          "raw_path": "raw/04ffe7dfe5033c95-95e6812ed44b4c1dbe98b0390ac0c9b4.json.gz",
+          "raw_series_count": 0,
+          "raw_to_query_store": {
+            "exact_equal": true,
+            "numeric_equal_rtol_1e_minus_12": true,
+            "max_absolute_difference": 0,
+            "max_relative_difference": 0,
+            "expected_points": 0,
+            "actual_points": 0,
+            "missing_points": 0,
+            "extra_points": 0,
+            "different_values": 0
+          },
+          "raw_identity_preserved": true,
+          "returned_timestamp_min_ms": null,
+          "returned_timestamp_max_ms": null,
+          "null_points": 0,
+          "zero_points": 0,
+          "units": [],
+          "topk": null,
+          "expected_unit_from_dashboard_axes": "percentunit",
+          "stored_units_match_dashboard_axes": true,
+          "raw_file_sha256": "6b835278e2d822333d872c99ef303e8899bcacc7a0976f435280986d4ee69557",
+          "grafana_ui_matches": [
+            {
+              "capture_file": "ui-final-responses.json",
+              "http_status": 200,
+              "request_semantics_exact_equal": true,
+              "ui_to_collector_values": {
+                "exact_equal": true,
+                "numeric_equal_rtol_1e_minus_12": true,
+                "max_absolute_difference": 0,
+                "max_relative_difference": 0,
+                "expected_points": 0,
+                "actual_points": 0,
+                "missing_points": 0,
+                "extra_points": 0,
+                "different_values": 0
+              }
+            }
+          ]
+        }
+      ],
+      "transformation": {
+        "definition": [
+          {
+            "id": "calculateField",
+            "options": {
+              "alias": "成功率",
+              "binary": {
+                "left": "success",
+                "operator": "/",
+                "reducer": "sum",
+                "right": "total"
+              },
+              "mode": "binary",
+              "reduce": {
+                "reducer": "sum"
+              },
+              "replaceFields": true
+            }
+          }
+        ],
+        "display_points": 0,
+        "live_formula_verified": false,
+        "reason": "Both real network inputs are empty in this historical filesystem/time range; no live ratio values exist. Synthetic tests validate division, nulls and replacement behavior."
+      }
+    }
+  ],
+  "limitations": [
+    "Raw response to SQLite and displayed SQLite values are required to match exactly. For separate Grafana UI requests only, report both exact equality and a 1e-12 relative / 1e-15 absolute tolerance; repeated Bosun evaluation differed at five points by at most 2.22e-16.",
+    "Panels 461 and 462 have genuinely empty inputs. Their Math/calculateField ratio implementation is tested with synthetic data, not validated on a nonempty real ratio sample.",
+    "Panel 70 Bosun server returns the computed ratio, not its raw operands. Matching the Grafana UI response verifies the server output and request semantics, not an independent recomputation of the ratio.",
+    "Panel 70 response Queries diagnostic timestamps differ from its actual Results timestamps and requested range. Treat Results plus captured client requests as evidence; do not treat the backend diagnostic Queries field as a trustworthy record of the execution window.",
+    "This frozen run was started before used_variables/legend_variables provenance was separated. Panel 414 A/C filesystem appears only in the legend and is not a filter. Product compiler is corrected; this audit records the caveat without mutating the frozen run."
+  ],
+  "summary": {
+    "audited_panels": 9,
+    "audited_queries": 18,
+    "audited_raw_points": 24900,
+    "all_raw_to_query_values_equal": true,
+    "all_raw_to_display_values_equal": true,
+    "ui_matched_queries": 11,
+    "all_ui_matched_values_equal": false,
+    "all_ui_matched_values_numerically_equal_rtol_1e_minus_12": true
+  }
+}

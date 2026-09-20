@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "separate_cli_process_restarted": true,
+  "frozen_start_ms": 1789647008758,
+  "frozen_interval_ms": 60000,
+  "fourth_round": [
+    {
+      "query_key": "23939a5493b16446655618d08067a9c9c65cf008060aa9e80c3fd85e97605a41",
+      "start_ms": 1789647128759,
+      "end_ms": 1789647338402,
+      "status": "success"
+    },
+    {
+      "query_key": "5da6c5209e06fa18bb6e9bb1612170ba3716a8b2a22e1db780e808b14f8073a1",
+      "start_ms": 1789647128759,
+      "end_ms": 1789647338402,
+      "status": "empty"
+    }
+  ]
+}

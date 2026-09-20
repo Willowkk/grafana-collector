@@ -1,0 +1,94 @@
+{
+  "passed": true,
+  "real_wall_clock_rounds": 3,
+  "panels": [
+    166,
+    150
+  ],
+  "start_ms": 1789647008758,
+  "end_ms": 1789647188759,
+  "poll_interval_ms": 60000,
+  "lookback_ms": 60000,
+  "fixed_sampling_ms": 60000,
+  "first_round_has_no_pre_start_history": true,
+  "attempts": [
+    {
+      "query_key": "23939a5493b16446655618d08067a9c9c65cf008060aa9e80c3fd85e97605a41",
+      "start_ms": 1789647008758,
+      "end_ms": 1789647068762,
+      "status": "empty"
+    },
+    {
+      "query_key": "5da6c5209e06fa18bb6e9bb1612170ba3716a8b2a22e1db780e808b14f8073a1",
+      "start_ms": 1789647008758,
+      "end_ms": 1789647068762,
+      "status": "empty"
+    },
+    {
+      "query_key": "5da6c5209e06fa18bb6e9bb1612170ba3716a8b2a22e1db780e808b14f8073a1",
+      "start_ms": 1789647008762,
+      "end_ms": 1789647128759,
+      "status": "empty"
+    },
+    {
+      "query_key": "23939a5493b16446655618d08067a9c9c65cf008060aa9e80c3fd85e97605a41",
+      "start_ms": 1789647008762,
+      "end_ms": 1789647128759,
+      "status": "success"
+    },
+    {
+      "query_key": "5da6c5209e06fa18bb6e9bb1612170ba3716a8b2a22e1db780e808b14f8073a1",
+      "start_ms": 1789647068759,
+      "end_ms": 1789647188759,
+      "status": "empty"
+    },
+    {
+      "query_key": "23939a5493b16446655618d08067a9c9c65cf008060aa9e80c3fd85e97605a41",
+      "start_ms": 1789647068759,
+      "end_ms": 1789647188759,
+      "status": "success"
+    }
+  ],
+  "duplicates": 0,
+  "panel_statuses": [
+    {
+      "panel_id": 150,
+      "title": "API QPS",
+      "group": "API",
+      "status": "success",
+      "point_count": 27,
+      "errors": [],
+      "last_display_status": "success",
+      "observed_ms": 1789647189077,
+      "queries": [
+        {
+          "key": "23939a5493b16446655618d08067a9c9c65cf008060aa9e80c3fd85e97605a41",
+          "ref_id": "A",
+          "status": "success",
+          "cursor_ms": 1789647188759,
+          "last_error": null
+        }
+      ]
+    },
+    {
+      "panel_id": 166,
+      "title": "Throughput",
+      "group": "IO",
+      "status": "empty",
+      "point_count": 0,
+      "errors": [],
+      "last_display_status": "empty",
+      "observed_ms": 1789647189083,
+      "queries": [
+        {
+          "key": "5da6c5209e06fa18bb6e9bb1612170ba3716a8b2a22e1db780e808b14f8073a1",
+          "ref_id": "B",
+          "status": "empty",
+          "cursor_ms": 1789647188759,
+          "last_error": null
+        }
+      ]
+    }
+  ],
+  "point_count": 54
+}

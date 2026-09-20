@@ -1,0 +1,107 @@
+{
+  "passed": true,
+  "description": "Real backend historical requests with injected logical timestamps and storage reopened between rounds; 38-minute gap is simulated, not wall-clock downtime.",
+  "attempts": [
+    {
+      "query_key": "5da6c5209e06fa18bb6e9bb1612170ba3716a8b2a22e1db780e808b14f8073a1",
+      "start_ms": 1789372500000,
+      "end_ms": 1789373400000,
+      "status": "success"
+    },
+    {
+      "query_key": "23939a5493b16446655618d08067a9c9c65cf008060aa9e80c3fd85e97605a41",
+      "start_ms": 1789372500000,
+      "end_ms": 1789373400000,
+      "status": "success"
+    },
+    {
+      "query_key": "5da6c5209e06fa18bb6e9bb1612170ba3716a8b2a22e1db780e808b14f8073a1",
+      "start_ms": 1789373340000,
+      "end_ms": 1789373460000,
+      "status": "success"
+    },
+    {
+      "query_key": "23939a5493b16446655618d08067a9c9c65cf008060aa9e80c3fd85e97605a41",
+      "start_ms": 1789373340000,
+      "end_ms": 1789373460000,
+      "status": "success"
+    },
+    {
+      "query_key": "23939a5493b16446655618d08067a9c9c65cf008060aa9e80c3fd85e97605a41",
+      "start_ms": 1789373400000,
+      "end_ms": 1789373520000,
+      "status": "success"
+    },
+    {
+      "query_key": "5da6c5209e06fa18bb6e9bb1612170ba3716a8b2a22e1db780e808b14f8073a1",
+      "start_ms": 1789373400000,
+      "end_ms": 1789373520000,
+      "status": "success"
+    },
+    {
+      "query_key": "5da6c5209e06fa18bb6e9bb1612170ba3716a8b2a22e1db780e808b14f8073a1",
+      "start_ms": 1789373460000,
+      "end_ms": 1789375800000,
+      "status": "success"
+    },
+    {
+      "query_key": "23939a5493b16446655618d08067a9c9c65cf008060aa9e80c3fd85e97605a41",
+      "start_ms": 1789373460000,
+      "end_ms": 1789375800000,
+      "status": "success"
+    }
+  ],
+  "rounds": [
+    {
+      "end_ms": 1789373400000,
+      "queries": {
+        "success": 2
+      },
+      "panels": {
+        "success": 2
+      },
+      "attempts": 2,
+      "cancelled": false,
+      "fatal_auth": false
+    },
+    {
+      "end_ms": 1789373460000,
+      "queries": {
+        "success": 2
+      },
+      "panels": {
+        "success": 2
+      },
+      "attempts": 2,
+      "cancelled": false,
+      "fatal_auth": false
+    },
+    {
+      "end_ms": 1789373520000,
+      "queries": {
+        "success": 2
+      },
+      "panels": {
+        "success": 2
+      },
+      "attempts": 2,
+      "cancelled": false,
+      "fatal_auth": false
+    },
+    {
+      "end_ms": 1789375800000,
+      "queries": {
+        "success": 2
+      },
+      "panels": {
+        "success": 2
+      },
+      "attempts": 2,
+      "cancelled": false,
+      "fatal_auth": false
+    }
+  ],
+  "duplicate_points": 0,
+  "point_count": 1620,
+  "fixed_interval_ms": 60000
+}
