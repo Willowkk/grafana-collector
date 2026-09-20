@@ -1,0 +1,19 @@
+{
+  "pass": true,
+  "python": "3.11.16",
+  "package_version": "0.3.0",
+  "module_path": "/Users/bytedance/01_github/grafana-collector/runs/validation/clean-v2/.venv/lib/python3.11/site-packages/grafana_collector/__init__.py",
+  "editable_install": false,
+  "reader_schema_versions": [
+    2
+  ],
+  "v1_rejections": {
+    "read_points": "Expected sdkv2-grafana-parquet schema version 2",
+    "read_provenance": "Expected sdkv2-grafana-parquet schema version 2"
+  },
+  "v2_sample_throughput_points": 52,
+  "v2_sample_throughput_series": 11,
+  "offline_export_rows": 13587,
+  "offline_export_nulls": 8684,
+  "source_run": "/Users/bytedance/01_github/grafana-collector/runs/history-20260914-1500-2100"
+}

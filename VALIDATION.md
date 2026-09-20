@@ -83,3 +83,46 @@ python scripts/audit_parquet.py --run runs/sdkv2_20260914_1500_2100 \
 源运行 SQLite 仅保存在原采集电脑；仓库中的样本可以独立读取，重跑源值审计需要对应 SQLite。网络登录和采集行为沿用前述真实验证，本次未重复发起在线采集。
 
 干净环境验证：新建独立 Python 3.11 虚拟环境，仅安装 0.2.0 wheel 及其声明依赖；在项目目录之外执行版本检查、真实 SQLite 的默认 Parquet 导出，以及交付样本读取示例，全部退出码为 0。未安装 Pandas，未启动 Chrome。记录见 `samples/validation/parquet-clean-install.json`。
+
+## 0.3.0 存储精简与协议 v2（2026-09-20）
+
+本次在 `/Users/bytedance/01_github/grafana-collector` 修改。原始数据使用用户已经运行过的
+`runs/history-20260914-1500-2100/collection.sqlite3`，只离线导出到新目录，未重新请求 Grafana。
+采集代码、SQLite 数据结构及采样口径没有修改。新格式为 `schema_version=2`；读取器仅接受 v2，其他版本明确报错。
+
+该源运行有 205 个面板（65 个 success、140 个 empty）；全部 206,492 个点、4,053 条曲线、
+8,684 个 null 与对应 v1 导出一致。面板数比此前 0.2.0 随库样本多一个无数据面板；不能混用两次冻结配置。
+新样本位于 `samples/parquet_v2_20260914_1500_2100/`；旧样本保持原样作为历史对照，不再由当前读取器支持。
+
+同一个源运行的独立 generation 数据包体积（字节）：
+
+| 文件 | v1 | v2 |
+|---|---:|---:|
+| points.parquet | 647,262 | 513,119 |
+| series.parquet | 788,763 | 188,466 |
+| manifest.json | 4,512,065 | 223,345 |
+| provenance.json.gz | 无独立文件 | 108,724 |
+| README.md | 3,076 | 4,547 |
+| 合计 | 5,951,166 | 1,038,201 |
+
+完整数据包减少 **82.55%**，包含移出的全部压缩追溯信息，不是只比较两个 Parquet 文件。
+points 行组由 65 降至 4，series 行组由 65 降至 1。`source_metadata_json` 中已结构化的信息不再重复写入；
+独有质量信息、聚合标签和未知扩展属性保留，面板标题/分组通过 `panel_id` 关联清单。
+
+验证结果：
+
+- 原 v1 与新 v2 的 Arrow 点表逐点相等，保留时间戳、浮点位模式、整数精度、null 和稳定 ID。
+- 全部曲线的完整标签、名称、单位/显示系数、质量信息、聚合标签及扩展元数据一致。
+- 完整冻结看板、变量、采样配置、全部查询定义（含本地 Math）、查询状态/进度/请求批次，以及面板状态和覆盖范围一致。
+- 新数据包五个文件复制到样本目录后，校验值全部一致；不依赖源运行目录即可读取点值及追溯信息。
+- **250 项测试通过**。覆盖 v2 读取、v1 及未知协议拒绝、跨面板行组、来源文件校验、独有元数据保留、本地 Math 引用及来源写失败不发布等验证；现有采集、恢复、Excel 和原子导出测试继续通过。
+- 在独立 Python **3.11.16** 虚拟环境安装 0.3.0 wheel（非 editable），`pip check` 通过。离开源码根目录读取 v2 样本，验证 v1 被拒绝，并离线导出面板 166/70 共 13,587 点；吞吐单位、比例显示系数与 8,684 个 null 正确。未启动 Chrome、未安装 Pandas。
+
+记录见 `samples/validation/parquet-v2-audit.json`、`parquet-v2-comparison.json`、`parquet-v2-clean-install.json`。
+
+复现源值与来源核对：
+
+```bash
+python scripts/audit_parquet.py --run runs/history-20260914-1500-2100 \
+  --manifest samples/parquet_v2_20260914_1500_2100/manifest.json
+```

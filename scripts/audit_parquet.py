@@ -16,6 +16,8 @@ import struct
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from grafana_collector.dataset import read_points, read_provenance
+
 
 def audit(run, manifest_path):
     manifest_path = Path(manifest_path).resolve()
@@ -27,16 +29,23 @@ def audit(run, manifest_path):
             failures.append(message)
 
     check(manifest.get("schema_name") == "sdkv2-grafana-parquet", "unexpected schema name")
-    check(manifest.get("schema_version") == 1, "unexpected schema version")
+    check(manifest.get("schema_version") == 2, "unexpected schema version")
     for name, info in manifest["files"].items():
         path = base / info["path"]
         check(path.is_file(), f"missing file: {name}")
         if path.is_file() and "sha256" in info:
             check(hashlib.sha256(path.read_bytes()).hexdigest() == info["sha256"], f"checksum mismatch: {name}")
+        if path.is_file() and "size_bytes" in info:
+            check(path.stat().st_size == info["size_bytes"], f"file size mismatch: {name}")
 
     points_path = base / manifest["files"]["points"]["path"]
-    points = pq.read_table(points_path)
+    points, normalized_series, _ = read_points(manifest_path)
     curves = pq.read_table(base / manifest["files"]["series"]["path"])
+    try:
+        provenance = read_provenance(manifest_path)
+    except (OSError, ValueError) as error:
+        failures.append(f"provenance verification failed: {error}")
+        provenance = {}
     check(points.schema.names == ["time", "panel_id", "series_id", "value"], "points field names")
     check(points["time"].type == pa.timestamp("ms", tz="UTC"), "timestamp type/timezone")
     check(points["value"].type == pa.float64(), "value must be float64")
@@ -60,8 +69,42 @@ def audit(run, manifest_path):
         connection.execute("BEGIN")
         plan = json.loads(connection.execute("SELECT value FROM metadata WHERE key='plan'").fetchone()[0])
         check(manifest["variables"] == plan["variables"], "frozen variables changed")
-        check(manifest["dashboard"] == plan["dashboard"], "frozen dashboard changed")
+        check(provenance.get("dashboard") == plan["dashboard"], "frozen dashboard changed")
+        check(provenance.get("sampling") == plan.get("metadata", {}), "frozen sampling changed")
+        check(provenance.get("variables") == plan["variables"], "provenance variables changed")
         check(panel_ids <= {p["id"] for p in plan["panels"]}, "unknown selected panel")
+        definitions = {query["key"]: query for panel in plan["panels"] if panel["id"] in panel_ids
+                       for query in panel["queries"]}
+        exported_queries = provenance.get("queries", {})
+        check(set(exported_queries) == set(definitions), "query provenance keys changed")
+        for key, definition in definitions.items():
+            saved = exported_queries.get(key, {})
+            check(saved.get("definition") == definition, f"frozen query definition changed: {key}")
+            if definition.get("kind") == "math":
+                continue
+            query = connection.execute("SELECT cursor_ms FROM queries WHERE key=?", (key,)).fetchone()
+            check(saved.get("cursor_ms") == query[0], f"query cursor changed: {key}")
+            rows = connection.execute("SELECT * FROM attempts WHERE query_key=? ORDER BY id", (key,))
+            columns = [column[0] for column in rows.description]
+            attempts = [dict(zip(columns, row)) for row in rows]
+            for attempt in attempts:
+                attempt["quality"] = json.loads(attempt["quality"])
+            check(saved.get("attempts") == attempts, f"query attempts changed: {key}")
+            latest = attempts[-1] if attempts else {}
+            expected_status = {
+                "status": latest.get("status", "unsupported" if definition.get("error") else "pending"),
+                "last_error": latest.get("error") or definition.get("error"),
+                "last_start_ms": latest.get("start_ms"), "last_end_ms": latest.get("end_ms"),
+            }
+            for field, value in expected_status.items():
+                check(saved.get(field) == value, f"query {field} changed: {key}")
+        for panel in plan["panels"]:
+            if panel["id"] in panel_ids:
+                check(provenance.get("panels", {}).get(str(panel["id"])) == {
+                    "query_keys": [query["key"] for query in panel["queries"]],
+                    "metadata": panel.get("metadata", {}),
+                    "transformations": panel.get("transformations", []),
+                }, f"frozen panel provenance changed: {panel['id']}")
         for sid, owner, description, timestamp, encoded in connection.execute(
             "SELECT s.id,s.owner_key,s.description,p.timestamp_ms,p.value_json "
             "FROM series s JOIN points p ON s.id=p.series_id WHERE s.owner_kind='display'"
@@ -78,7 +121,7 @@ def audit(run, manifest_path):
             source_count[panel] += 1
 
     source_rows = len(expected)
-    series_rows = curves.to_pylist()
+    series_rows = list(normalized_series.values())
     check(len({row["series_id"] for row in series_rows}) == len(series_rows), "duplicate series metadata")
     check({row["series_id"] for row in series_rows} == set(descriptions), "series metadata does not match actual points")
     units = Counter()
@@ -91,6 +134,15 @@ def audit(run, manifest_path):
         check(row["grafana_unit"] == description.get("unit"), "Grafana unit changed")
         check(row["panel_title"] == panels[row["panel_id"]]["title"], "panel title changed")
         check(row["group"] == panels[row["panel_id"]].get("group", ""), "panel group changed")
+        for source, field in (("name", "name"), ("metric", "metric"), ("ref_id", "ref_id"),
+                              ("query_key", "query_key"), ("quality", "quality"),
+                              ("aggregate_tags", "aggregate_tags")):
+            default = "" if source in {"name", "metric", "ref_id"} else None
+            check(row.get(field) == description.get(source, default), f"series {source} changed")
+        known = {"series_id", "points", "name", "metric", "ref_id", "query_key", "labels", "unit",
+                 "quality", "aggregate_tags"}
+        check(row["extra_metadata"] == {key: value for key, value in description.items() if key not in known},
+              "series extra metadata changed")
         units[row["grafana_unit"]] += 1
         if row["grafana_unit"] == "percentunit":
             check(row["value_unit"] == "ratio" and row["display_unit"] == "%" and row["display_scale"] == 100,
@@ -123,6 +175,7 @@ def audit(run, manifest_path):
         "pass": not failures,
         "audited_at": datetime.now(timezone.utc).isoformat(),
         "generation": manifest["generation"],
+        "schema_version": manifest["schema_version"],
         "source_run": str(Path(run).resolve()),
         "manifest": str(manifest_path),
         "panels": len(panel_ids), "series": curves.num_rows,
@@ -131,6 +184,9 @@ def audit(run, manifest_path):
         "explicit_nulls": points["value"].null_count,
         "panel_statuses": dict(Counter(p["status"] for p in manifest["panels"])),
         "units": dict(units), "compression": sorted(compression),
+        "point_row_groups": parquet.metadata.num_row_groups,
+        "series_row_groups": pq.ParquetFile(base / manifest["files"]["series"]["path"]).metadata.num_row_groups,
+        "file_sizes": {name: (base / info["path"]).stat().st_size for name, info in manifest["files"].items()},
         "failure_count": len(failures), "failures": sorted(set(failures)),
     }
 

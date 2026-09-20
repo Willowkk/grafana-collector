@@ -1,0 +1,40 @@
+{
+  "pass": true,
+  "audited_at": "2026-09-20T09:39:09.450237+00:00",
+  "generation": "20260920T093825-3d9012e9e0cd",
+  "schema_version": 2,
+  "source_run": "/Users/bytedance/01_github/grafana-collector/runs/history-20260914-1500-2100",
+  "manifest": "/Users/bytedance/01_github/grafana-collector/samples/parquet_v2_20260914_1500_2100/manifest.json",
+  "panels": 205,
+  "series": 4053,
+  "source_points": 206492,
+  "exported_points": 206492,
+  "numeric_points": 197808,
+  "explicit_nulls": 8684,
+  "panel_statuses": {
+    "success": 65,
+    "empty": 140
+  },
+  "units": {
+    "reqps": 370,
+    "µs": 3332,
+    "percentunit": 132,
+    "short": 146,
+    "binBps": 21,
+    "kbytes": 48,
+    "none": 4
+  },
+  "compression": [
+    "ZSTD"
+  ],
+  "point_row_groups": 4,
+  "series_row_groups": 1,
+  "file_sizes": {
+    "points": 513119,
+    "series": 188466,
+    "provenance": 108724,
+    "readme": 4547
+  },
+  "failure_count": 0,
+  "failures": []
+}

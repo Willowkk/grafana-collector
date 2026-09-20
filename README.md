@@ -9,7 +9,7 @@
 采集需要 **Python 3.11 或以上**、Google Chrome，以及能访问 `grafana.byted.org` 的网络；离线导出和读取 Parquet 不需要 Chrome 或 Grafana 网络。macOS 的 `/usr/bin/python3` 可能是旧版本，请先检查版本。以下以 Python 3.12 为例：
 
 ```bash
-git clone git@code.byted.org:jinpengbin/grafana-collector.git
+git clone https://code.byted.org/jinpengbin/grafana-collector.git
 cd grafana-collector
 python3.12 -m venv .venv
 source .venv/bin/activate
@@ -17,9 +17,9 @@ python -m pip install -e '.[test]'
 grafana-collector --help
 ```
 
-普通安装只需 `python -m pip install .`。发布 wheel 可在另一台具备相同网络访问能力的 Mac 上安装；无需 Codex。`requirements.lock` 记录本次验证环境的版本。
+仓库位于 [Codebase 个人空间](https://code.byted.org/jinpengbin/grafana-collector)，HTTPS 克隆需要终端具备 Codebase 认证；也可使用 SSH 地址 `git@code.byted.org:jinpengbin/grafana-collector.git`。普通安装只需 `python -m pip install .`。发布 wheel 可在另一台具备相同网络访问能力的 Mac 上安装；无需 Codex。`requirements.lock` 记录本次验证环境的版本。
 
-克隆需要本机 SSH 身份已登记到 Codebase；可用 `ssh -T git@code.byted.org` 检查。已有本地项目时直接进入项目目录执行环境创建和安装步骤。
+使用 SSH 克隆时，需要本机 SSH 身份已登记到 Codebase；可用 `ssh -T git@code.byted.org` 检查。已有本地项目时直接进入项目目录执行环境创建和安装步骤。
 
 ## 首次登录与历史下载
 
@@ -94,15 +94,18 @@ grafana-collector export --run runs/history --out runs/history-subset \
   exports/<导出批次>/
     points.parquet            # 全部所选面板的实际数据点
     series.parquet            # 曲线名称、完整标签及单位
-    manifest.json             # 此批次独立清单，路径相对此文件
+    manifest.json             # 精简索引、面板信息与状态，路径相对此文件
+    provenance.json.gz        # 冻结看板、完整采样配置、查询定义和批次来源
     README.md                 # 数据协议和读取说明
 ```
 
-每次导出读取同一个 SQLite 快照，写入独立批次目录后再原子更新外层 `manifest.json`。旧批次保持可读，导出失败不会替换上次有效清单。交付数据时复制整个 `exports/<导出批次>/` 即可，里面的清单和文件可独立使用。外层清单通过 `files.points.path`、`files.series.path` 指向最近一次导出的文件，不要自行拼接文件名。
+每次导出读取同一个 SQLite 快照，写入独立批次目录后再原子更新外层 `manifest.json`。旧批次文件保留，导出失败不会替换上次有效清单；本版本读取器仅接受 v2 数据包。交付数据时复制整个 `exports/<导出批次>/` 即可，里面的清单和文件可独立使用。外层清单通过 `files.points.path`、`files.series.path` 指向最近一次导出的文件，不要自行拼接文件名。
+
+当前 v2 完整真实样本见 `samples/parquet_v2_20260914_1500_2100/`；原 `samples/parquet_20260914_1500_2100/` 仅保留作 v1 历史对照，不支持通过当前读取器读取。新格式的同源数据包实测从 5.95 MB 降至 1.04 MB，减少 82.55%；点数和数值未变。详细范围、体积和验证记录见 `samples/README.md`、`VALIDATION.md`。
 
 ### Parquet 数据协议
 
-协议标识为 `sdkv2-grafana-parquet`，`schema_version=1`，Parquet 使用 Arrow 类型和 Zstandard 压缩。一个数据集对应一次导出的固定快照，所有面板使用同一套列结构。
+0.3.0 起导出协议标识为 `sdkv2-grafana-parquet`、`schema_version=2`。Parquet 使用 Arrow 类型和 Zstandard 压缩。一个数据集对应一次导出的固定快照，所有面板使用同一套列结构。写入时跨面板累计，每个行组最多 65,536 行，减少按面板产生大量小行组的开销；行组边界不代表面板边界。
 
 `points.parquet` 一行代表一条曲线在一个时刻的值：
 
@@ -115,7 +118,17 @@ grafana-collector export --run runs/history --out runs/history-subset \
 
 快照内 `(panel_id, series_id, time)` 唯一。曲线 ID 来自完整标签和查询等身份信息，不能只用图例文本识别曲线；跨大盘或不同采样/查询配置的数据不要直接混为同一数据集。新增 namespace 或 TopK 曲线只增加行，不增加列。
 
-`series.parquet` 每条曲线一行，保存面板标题及分组、图例名称、完整标签（`map<string,string>`）、指标和引用 ID，以及 `grafana_unit`、`value_unit`、`display_unit`、`display_scale`。任务 ID 和 namespace 始终作为字符串标签保存。数据点只包含完成 Math/面板转换后的曲线，隐藏查询输入及详细请求来源见运行记录和清单。
+`series.parquet` 每条曲线一行，保存 `panel_id`、`series_id`、`name`、`metric`、`ref_id`、`query_key`、完整标签（`map<string,string>`），以及 `grafana_unit`、`value_unit`、`display_unit`、`display_scale`、`unit_family`、`unit_status`。任务 ID 和 namespace 始终作为字符串标签保存。通过 `(panel_id, series_id)` 与点表关联。面板标题和分组只保存在 `manifest.panels[]` 的 `title`、`group` 中，通过 `panel_id` 关联，不再为每条曲线重复存储。
+
+v2 用以下字段保留结构化列以外的来源信息，避免再序列化整条曲线元数据：
+
+| 字段 | Arrow 类型 | 含义 |
+|---|---|---|
+| `quality_json` | `string`，可为 null | 仅曲线的 `quality` 字典，使用 JSON 保存质量计数等信息 |
+| `aggregate_tags` | `list<string>`，可为 null | 源响应中参与聚合的标签名称 |
+| `extra_metadata_json` | `string`，可为 null | 仅尚未有专用列的其他来源属性，不重复标签、名称、指标或单位 |
+
+没有这些信息时使用 null。原 v1 的 `source_metadata_json` 列不再写入。数据点只包含完成 Math/面板转换后的曲线，隐藏查询输入及详细请求来源见运行记录和 `provenance.json.gz`。
 
 单位来自 Grafana 配置；计算值与显示换算分开。例如 Throughput 的 `value=506523156.5333`、`value_unit=B/s`，`display_unit=GiB/s`、`display_scale=1/1024³`。需要展示时计算 `value * display_scale`，可显示为 `0.472 GiB/s`。比例保留原值，`0.01` 表示 1%；其 `display_unit=%`、`display_scale=100`。显示尺度按本次所选面板/时间窗确定，不能用它改变或解释其他批次的原值。未知单位会明确标识，不能猜测换算。
 
@@ -123,7 +136,11 @@ grafana-collector export --run runs/history --out runs/history-subset \
 
 只导出实际数据点。明确返回的空值保留为 null，未返回的时间点不生成行，不补零、不插值。比如 Throughput 这次返回 11 条曲线、52 个实际点，长表就是 52 行；不同 namespace 的活跃时段本来可以不同。
 
-`manifest.json` 保存看板版本、变量、查询定义、采样口径、来源及每个所选面板的状态。无数据的面板也在清单中，不能仅凭 points 中是否出现该面板判断成功或失败。
+`manifest.json` 保留看板摘要及版本、变量、采样摘要、文件路径和校验值，以及每个所选面板的标题、分组、状态、点数和覆盖范围。无数据的面板也在清单中，不能仅凭 points 中是否出现该面板判断成功或失败。
+
+完整来源放在 `files.provenance.path` 指向的 `provenance.json.gz` 中。其 `dashboard` 保存冻结看板，`sampling` 保存完整采样配置，`queries` 按 `query_key` 存储一次查询定义及状态、进度和请求批次，`panels` 按面板 ID 的字符串存储面板元信息、转换和 `query_keys`。清单中每个面板的 `query_keys` 引用同一查询字典；实际查询间隔见 `queries[query_key].definition.interval_ms`，显式降采样等设置见该定义及其 `metadata`。不要根据轮询周期推断采样间隔。
+
+追溯信息记录原始响应的本地路径，不会把运行目录的 `raw/` 再复制进五文件数据包。离线分析点值、标签和查询定义只需要完整数据包；核对原始 HTTP 响应时还需保留原运行目录。来源记录到查询/批次级，不承诺每个点唯一对应某个响应批次。
 
 `collection_status` 是运行的采集状态，`range_status` 是本次导出范围的覆盖情况（`covered`、`partial`、`uncollected`）；`display_coverage` 列出实际已计算的时间区间。导出操作完成不代表该时间范围数据完整，应同时查看这些状态。
 
@@ -131,23 +148,23 @@ grafana-collector export --run runs/history --out runs/history-subset \
 
 ### 读取示例
 
-下面从运行目录或独立数据包的清单读取面板 166，得到 `pyarrow.Table`，无需 Pandas：
+安装本项目后，可用读取函数从包含 v2 数据包的运行目录或独立数据包读取面板 166，得到 `pyarrow.Table`，无需 Pandas：
 
 ```python
-import json
-from pathlib import Path
-import pyarrow.parquet as pq
+from grafana_collector.dataset import read_points, read_provenance
 
-manifest_path = Path("runs/history/manifest.json")
-manifest = json.loads(manifest_path.read_text())
-points = pq.read_table(
-    manifest_path.parent / manifest["files"]["points"]["path"],
-    filters=[("panel_id", "=", 166)],
-)
-series = pq.read_table(manifest_path.parent / manifest["files"]["series"]["path"])
+points, series_by_id, manifest = read_points("runs/history", panel_id=166)
 print(points.schema)
 print(points.slice(0, 5).to_pylist())
+
+# 需要核对完整查询和来源时才读取；普通点数据读取无需解压来源文件。
+provenance = read_provenance("runs/history")
+for key in provenance["panels"]["166"]["query_keys"]:
+    query = provenance["queries"][key]["definition"]
+    print(query["ref_id"], query["interval_ms"])
 ```
+
+`read_points` 返回的曲线信息会补齐 `panel_title`、`group`，将标签转为字典，并提供解码后的 `quality`、`aggregate_tags` 和 `extra_metadata`。`read_provenance` 按需读取压缩来源文件，返回上述按 ID 索引的查询/面板字典。两个函数仅接受 `schema_version=2`，其他版本均明确报错。
 
 可执行示例 `examples/read_parquet.py` 还支持完整标签和时间筛选，并演示关联单位：
 
@@ -156,6 +173,21 @@ python examples/read_parquet.py runs/history --panel 166 --limit 5
 python examples/read_parquet.py runs/history --panel 166 --tag method=cfs_pread \
   --from '2026-09-14T16:00:00+08:00' --to '2026-09-14T17:00:00+08:00'
 ```
+
+### 从已有采集记录导出 v2
+
+本版本只读写 `schema_version=2` 的 Parquet 数据包，v1 及其他版本均不受支持。已有下游程序需要更新为 v2 字段：面板标题和分组关联清单，查询定义/采样详情读取压缩来源文件，质量信息使用上述专用列。
+
+手上有 `collection.sqlite3` 时，可在升级安装后离线导出到一个新目录：
+
+```bash
+python -m pip install .
+grafana-collector export --run runs/history-20260914-1500-2100 \
+  --out runs/history-20260914-1500-2100-v2 --format parquet
+python examples/read_parquet.py runs/history-20260914-1500-2100-v2 --panel 166 --limit 5
+```
+
+无需重新登录或查询 Grafana。SQLite 存储格式未变，新导出保留曲线 ID、时间戳、数值、null、标签和单位口径，只调整导出布局；不会改变采样精度或补出原本不存在的数据点。仅持有旧版 Parquet 数据包时，请向提供方索取 v2 数据包；`export --run` 需要 SQLite，不能把只含 Parquet 的样本目录当成采集运行目录。
 
 ### 可选 Excel
 
@@ -184,4 +216,4 @@ python -m pip wheel . --no-deps -w dist
 
 测试使用合成响应，覆盖变量替换、真实版本自动间隔阈值、查询协议、公式、独立进度、迟到修订、TopK、断网重试、认证暂停、长时间中断恢复、停止与两种格式导出。真实采集核对见 `VALIDATION.md`。
 
-模块职责：`query.py` 编译和计算；`transport.py` 登录与接口；`engine.py` 增量调度；`storage.py` 持久化；`exporting.py` 格式分发；`parquet_exporter.py` Parquet 协议；`exporter.py` Excel；`units.py` Grafana 单位与数字格式；`cli.py` 命令入口。若内部 Grafana 插件或布局变化，应先更新对应适配和对照测试，再使用新运行目录采集。
+模块职责：`query.py` 编译和计算；`transport.py` 登录与接口；`engine.py` 增量调度；`storage.py` 持久化；`exporting.py` 格式分发；`parquet_exporter.py` Parquet 协议；`dataset.py` v2 数据包读取；`exporter.py` Excel；`units.py` Grafana 单位与数字格式；`cli.py` 命令入口。若内部 Grafana 插件或布局变化，应先更新对应适配和对照测试，再使用新运行目录采集。

@@ -9,50 +9,8 @@ import argparse
 import json
 from pathlib import Path
 
-import pyarrow as pa
-import pyarrow.dataset as ds
-import pyarrow.parquet as pq
-
+from grafana_collector.dataset import read_points
 from grafana_collector.timeutil import parse_time
-
-
-def read_points(path, *, panel_id=None, tags=None, from_ms=None, to_ms=None):
-    """Return (Arrow Table, metadata by series_id, manifest) for selected points.
-
-    Files are resolved against the manifest, so both a run directory's outer
-    manifest and a copied generation's self-contained manifest work unchanged.
-    Check manifest panel coverage/status before using data as complete history.
-    """
-    path = Path(path)
-    manifest_path = path / "manifest.json" if path.is_dir() else path
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if (manifest.get("schema_name"), manifest.get("schema_version"), manifest.get("format")) != (
-        "sdkv2-grafana-parquet", 1, "parquet"
-    ):
-        raise ValueError("Expected sdkv2-grafana-parquet schema version 1")
-    if from_ms is not None and to_ms is not None and from_ms > to_ms:
-        raise ValueError("Start time must not be after end time")
-    base = manifest_path.parent
-    series = pq.read_table(base / manifest["files"]["series"]["path"])
-    selected = {}
-    for item in series.to_pylist():
-        if panel_id is not None and item["panel_id"] != panel_id:
-            continue
-        labels = dict(item["labels"] or [])
-        if not all(labels.get(key) == value for key, value in (tags or {}).items()):
-            continue
-        selected[item["series_id"]] = {**item, "labels": labels}
-
-    condition = ds.field("series_id").isin(pa.array(list(selected), type=pa.string()))
-    if panel_id is not None:
-        condition = condition & (ds.field("panel_id") == panel_id)
-    for boundary, is_start in ((from_ms, True), (to_ms, False)):
-        if boundary is None:
-            continue
-        timestamp = pa.scalar(boundary, type=pa.timestamp("ms", tz="UTC"))
-        condition = condition & ((ds.field("time") >= timestamp) if is_start else (ds.field("time") <= timestamp))
-    points = ds.dataset(base / manifest["files"]["points"]["path"], format="parquet").to_table(filter=condition)
-    return points, selected, manifest
 
 
 def main():

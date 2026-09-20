@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import gzip
 import json
 from pathlib import Path
 import re
@@ -51,6 +52,12 @@ def read_export(path):
     return manifest, tables["points"], tables["series"]
 
 
+def read_provenance(path):
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    with gzip.open(path.parent / manifest["files"]["provenance"]["path"], "rt", encoding="utf-8") as stream:
+        return json.load(stream)
+
+
 def test_typed_long_table_uses_display_values_preserves_nulls_ids_labels_and_utc(store, tmp_path):
     samples = [series([[START + 1, 17.123456789012345], [START + 2000, None]]),
                series([[START + 3000, 0]], host="b")]
@@ -59,7 +66,8 @@ def test_typed_long_table_uses_display_values_preserves_nulls_ids_labels_and_utc
     store.record_display(1, samples, START, END)
     store.record_display(2, [series([[START + 1, 9]])], START, END)
     before = store.get_display_series(1)
-    manifest, points, curves = read_export(export_run(store, tmp_path / "export", panel_ids=[1, 2]))
+    path = export_run(store, tmp_path / "export", panel_ids=[1, 2])
+    manifest, points, curves = read_export(path)
     assert points.schema == POINTS_SCHEMA
     assert curves.schema == SERIES_SCHEMA
     assert points.schema.field("time").type == pa.timestamp("ms", tz="UTC")
@@ -74,16 +82,18 @@ def test_typed_long_table_uses_display_values_preserves_nulls_ids_labels_and_utc
     descriptions = curves.to_pylist()
     assert len(descriptions) == 3 and len({row["series_id"] for row in descriptions}) == 3
     assert {row["name"] for row in descriptions} == {"same"}
-    assert {row["panel_title"] for row in descriptions} == {"Through/put"}
+    assert {row["title"] for row in manifest["panels"]} == {"Through/put"}
+    assert not {"group", "panel_title", "source_metadata_json"} & set(curves.column_names)
     assert all(dict(row["labels"])["namespace"] == "9115285645797950347" for row in descriptions)
     host_a = next(row for row in descriptions if row["panel_id"] == 1 and dict(row["labels"])["host"] == "a")
     a_points = [row for row in rows if row["series_id"] == host_a["series_id"]]
     assert len(a_points) == 2 and sum(row["value"] is None for row in a_points) == 1
     assert manifest["files"]["points"]["null_count"] == 1
     assert manifest["exporter"]["version"] == __version__
-    assert manifest["schema_name"] == "sdkv2-grafana-parquet" and manifest["schema_version"] == 1
-    assert manifest["query_statuses"][0]["attempts"][0]["raw_path"].endswith(".json.gz")
-    assert manifest["raw_provenance"]["point_to_attempt_mapping"] is False
+    assert manifest["schema_name"] == "sdkv2-grafana-parquet" and manifest["schema_version"] == 2
+    provenance = read_provenance(path)
+    assert provenance["queries"]["q1"]["attempts"][0]["raw_path"].endswith(".json.gz")
+    assert provenance["raw_provenance"]["point_to_attempt_mapping"] is False
     assert store.get_display_series(1) == before
 
 
@@ -110,7 +120,7 @@ def test_original_units_and_display_metadata_include_percent_program_factor(stor
     assert byte_count["display_scale"] == 1 / 1024 and kibibytes["display_scale"] == 1
     assert byte_count["value_unit"] == "B" and kibibytes["value_unit"] == "KiB"
     assert not {"number_format", "excel_percent", "min_column_width"} & set(curves.column_names)
-    assert all("number_format" not in row["source_metadata_json"] for row in descriptions.values())
+    assert all(row["extra_metadata_json"] is None for row in descriptions.values())
 
 
 @pytest.mark.parametrize("unit,expected", [("bytes", "B"), ("kbytes", "KiB"), ("decbytes", "B"),
@@ -176,7 +186,8 @@ def test_filters_are_inclusive_and_scale_uses_selected_window_without_changing_i
     assert points.column("time").cast(pa.int64()).to_pylist() == [START + 1000, START + 2000]
     assert points.column("value").to_pylist() == [1.0, None]
     assert selected["selected_panel_ids"] == [1] and len(selected["panels"]) == 1
-    assert selected["query_statuses"][0]["panel_id"] == 1 and len(selected["query_statuses"]) == 1
+    assert selected["panels"][0]["query_keys"] == ["q1"]
+    assert set(read_provenance(first_path)["queries"]) == {"q1"}
     assert first_series.to_pylist()[0]["series_id"] == curves.to_pylist()[0]["series_id"]
     assert curves.to_pylist()[0]["display_unit"] == "B/s"
     assert first["generation"] != selected["generation"]
@@ -316,3 +327,93 @@ def test_invalid_panel_or_time_selection_does_not_publish(store, tmp_path):
     with pytest.raises(ValueError, match="end precedes start"):
         export_run(store, out, from_ms=END, to_ms=START)
     assert not (out / "manifest.json").exists()
+
+
+def test_v2_keeps_unique_source_attributes_and_normalizes_shared_provenance(store, tmp_path):
+    plan = make_plan()
+    query = plan["panels"][0]["queries"][0]
+    sample = series([[START, 5], [START + 1000, None]],
+                    quality={"nonfinite_values": 1, "future_quality_flag": "retained"},
+                    aggregate_tags=["filesystem", "task_id"],
+                    extension={"origin": ["native", {"version": 2}]})
+    store.record_result(query, START, END, [sample], {"response": "raw"})
+    store.record_display(1, [sample], START, END)
+    path = export_run(store, tmp_path / "export", panel_ids=[1], from_ms=START + 1000)
+    manifest, points, curves = read_export(path)
+    row = curves.to_pylist()[0]
+    assert points["value"].to_pylist() == [None]
+    assert json.loads(row["quality_json"]) == sample["quality"]
+    assert row["aggregate_tags"] == sample["aggregate_tags"]
+    assert json.loads(row["extra_metadata_json"]) == {"extension": sample["extension"]}
+    assert "query_statuses" not in manifest
+    assert "query_definitions" not in manifest["panels"][0]
+    assert "series_ids" not in manifest["panels"][0]
+    provenance = read_provenance(path)
+    assert provenance["generation"] == manifest["generation"]
+    assert provenance["dashboard"] == plan["dashboard"]
+    assert provenance["sampling"] == plan["metadata"]
+    assert provenance["queries"]["q1"]["definition"] == query
+    assert len(provenance["queries"]["q1"]["attempts"]) == 1
+    assert provenance["panels"]["1"] == {
+        "query_keys": ["q1"], "metadata": plan["panels"][0]["metadata"], "transformations": []}
+    # Main-manifest references resolve even when exporting only a subrange.
+    assert set(manifest["panels"][0]["query_keys"]) <= provenance["queries"].keys()
+
+
+def test_small_panels_share_row_groups_and_preserve_all_points(store, tmp_path, monkeypatch):
+    monkeypatch.setattr(parquet_exporter, "_BATCH_ROWS", 3)
+    store.record_display(1, [series([[START + i, i] for i in range(4)]),
+                             series([[START + 4, None]], host="b")], START, END)
+    store.record_display(2, [series([[START + i, 10 + i] for i in range(4)])], START, END)
+    path = export_run(store, tmp_path / "export", panel_ids=[1, 2])
+    manifest, points, curves = read_export(path)
+    assert points.num_rows == 9 and curves.num_rows == 3
+    metadata = pq.ParquetFile(path.parent / manifest["files"]["points"]["path"]).metadata
+    assert [metadata.row_group(i).num_rows for i in range(metadata.num_row_groups)] == [3, 3, 3]
+    series_metadata = pq.ParquetFile(path.parent / manifest["files"]["series"]["path"]).metadata
+    assert series_metadata.num_row_groups == 1
+    assert set(points["panel_id"].to_pylist()) == {1, 2}
+    assert points["value"].null_count == 1
+    assert sorted(x for x in points["value"].to_pylist() if x is not None) == [0, 1, 2, 3, 10, 11, 12, 13]
+
+
+def test_provenance_failure_cannot_publish_incomplete_package(store, tmp_path, monkeypatch):
+    store.record_display(1, [series([[START, 1]])], START, END)
+    out = tmp_path / "export"
+    path = export_run(store, out, panel_ids=[1])
+    previous = path.read_bytes()
+    generations = set((out / "exports").iterdir())
+
+    def fail_provenance(path, value):
+        path.write_bytes(b"incomplete gzip")
+        raise OSError("provenance write failed")
+
+    monkeypatch.setattr(parquet_exporter, "_write_provenance", fail_provenance)
+    with pytest.raises(OSError, match="provenance write failed"):
+        export_run(store, out, panel_ids=[1])
+    assert path.read_bytes() == previous
+    assert set((out / "exports").iterdir()) == generations
+    assert not list(out.glob(".manifest-*.tmp"))
+    assert read_provenance(path)["schema_version"] == 2
+
+
+def test_invalid_aggregate_tags_fails_instead_of_discarding_source_metadata(store, tmp_path):
+    store.record_display(1, [series([[START, 1]], aggregate_tags=[1])], START, END)
+    out = tmp_path / "export"
+    with pytest.raises(ValueError, match="aggregate_tags"):
+        export_run(store, out, panel_ids=[1])
+    assert not (out / "manifest.json").exists()
+
+
+def test_local_math_definition_remains_resolvable_without_network_attempts(tmp_path):
+    plan = make_plan()
+    formula = {**plan["panels"][0]["queries"][0], "key": "formula", "ref_id": "B",
+               "kind": "math", "dependencies": ["A"], "query": {"expression": "$A * 2"}}
+    plan["panels"][0]["queries"].append(formula)
+    with Store(tmp_path / "math-run") as store:
+        store.initialize(plan)
+        path = export_run(store, tmp_path / "export", panel_ids=[1])
+    manifest = json.loads(path.read_text())
+    provenance = read_provenance(path)
+    assert manifest["panels"][0]["query_keys"] == ["q1", "formula"]
+    assert provenance["queries"]["formula"] == {"definition": formula}

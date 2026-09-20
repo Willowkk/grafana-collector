@@ -1,0 +1,57 @@
+{
+  "checks": {
+    "points_equal": true,
+    "series_ids_equal": true,
+    "series_metadata_equal": true,
+    "frozen_dashboard_sampling_queries_panels_equal": true,
+    "panel_statuses_and_counts_equal": true
+  },
+  "old": {
+    "points": {
+      "size_bytes": 647262,
+      "row_groups": 65,
+      "footer_bytes": 35597
+    },
+    "series": {
+      "size_bytes": 788763,
+      "row_groups": 65,
+      "footer_bytes": 183037
+    },
+    "readme": {
+      "size_bytes": 3076
+    },
+    "manifest": {
+      "size_bytes": 4512065
+    },
+    "total_bytes": 5951166
+  },
+  "new": {
+    "points": {
+      "size_bytes": 513119,
+      "row_groups": 4,
+      "footer_bytes": 2807
+    },
+    "series": {
+      "size_bytes": 188466,
+      "row_groups": 1,
+      "footer_bytes": 4001
+    },
+    "provenance": {
+      "size_bytes": 108724
+    },
+    "readme": {
+      "size_bytes": 4547
+    },
+    "manifest": {
+      "size_bytes": 223345
+    },
+    "total_bytes": 1038201
+  },
+  "reduction_percent": 82.55,
+  "points": 206492,
+  "series": 4053,
+  "nulls": 8684,
+  "old_generation": "20260920T074702-ebcecee18cd0",
+  "new_generation": "20260920T093825-3d9012e9e0cd",
+  "reader_support": "schema_version=2 only; v1 comparison used raw Parquet tables, not a compatibility reader"
+}
