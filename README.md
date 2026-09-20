@@ -2,12 +2,15 @@
 
 从内部 Grafana SDKv2 大盘下载历史指标，或在 Mac 上持续增量采集，默认导出程序可直接读取的 **Parquet 长表数据集**。支持本实例 OpenTSDB、Bosun、Grafana Math 和现有面板转换；Excel 可通过 `--format xlsx` 选择。项目可独立安装运行，不依赖 Codex。
 
+主仓库：[Codebase / jinpengbin/grafana-collector](https://code.byted.org/jinpengbin/grafana-collector)。
+
 ## 安装
 
 采集需要 **Python 3.11 或以上**、Google Chrome，以及能访问 `grafana.byted.org` 的网络；离线导出和读取 Parquet 不需要 Chrome 或 Grafana 网络。macOS 的 `/usr/bin/python3` 可能是旧版本，请先检查版本。以下以 Python 3.12 为例：
 
 ```bash
-cd /Users/bytedance/00_projects/IO_Pattern/grafana_collector
+git clone git@code.byted.org:jinpengbin/grafana-collector.git
+cd grafana-collector
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[test]'
@@ -15,6 +18,8 @@ grafana-collector --help
 ```
 
 普通安装只需 `python -m pip install .`。发布 wheel 可在另一台具备相同网络访问能力的 Mac 上安装；无需 Codex。`requirements.lock` 记录本次验证环境的版本。
+
+克隆需要本机 SSH 身份已登记到 Codebase；可用 `ssh -T git@code.byted.org` 检查。已有本地项目时直接进入项目目录执行环境创建和安装步骤。
 
 ## 首次登录与历史下载
 

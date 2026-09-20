@@ -80,6 +80,6 @@ python scripts/audit_parquet.py --run runs/sdkv2_20260914_1500_2100 \
   --manifest samples/parquet_20260914_1500_2100/manifest.json
 ```
 
-源运行 SQLite 仅保存在原采集电脑；GitHub 中的样本可以独立读取，重跑源值审计需要对应 SQLite。网络登录和采集行为沿用前述真实验证，本次未重复发起在线采集。
+源运行 SQLite 仅保存在原采集电脑；仓库中的样本可以独立读取，重跑源值审计需要对应 SQLite。网络登录和采集行为沿用前述真实验证，本次未重复发起在线采集。
 
 干净环境验证：新建独立 Python 3.11 虚拟环境，仅安装 0.2.0 wheel 及其声明依赖；在项目目录之外执行版本检查、真实 SQLite 的默认 Parquet 导出，以及交付样本读取示例，全部退出码为 0。未安装 Pandas，未启动 Chrome。记录见 `samples/validation/parquet-clean-install.json`。

@@ -12,4 +12,4 @@ python examples/read_parquet.py samples/parquet_20260914_1500_2100 --panel 166 -
 
 快照文件可直接交给下游读取，不包含浏览器登录状态、SQLite 或压缩接口响应。清单里的源运行绝对路径及 raw 响应路径是来源记录，不是读取此数据包的依赖。原始 SQLite/响应仍在本机 `runs/sdkv2_20260914_1500_2100/`；完整数值核对报告见 `validation/parquet-audit.json`。
 
-历史 0.1.1 Excel 样本和压缩包保留在本机原目录；本仓库当前样本使用 Parquet。`validation/` 同时保留早期采集验证记录，需按记录版本区分；当前格式以本数据包 manifest 为准。
+历史 0.1.1 Excel 样本和压缩包保留在本机原目录；本仓库当前样本使用 Parquet。主仓库位于内部 Codebase。`validation/` 同时保留早期采集验证记录，需按记录版本区分；当前格式以本数据包 manifest 为准。
