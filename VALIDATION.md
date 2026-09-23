@@ -1,12 +1,12 @@
 # 验证记录
 
-## 0.4.0 自动输出与过程文件清理（2026-09-23）
+## 0.4.0 Chrome 启动参数与采集产物调整（2026-09-23）
 
 本次修改不保存新请求的 raw 响应，移除 CLI `export` 命令，由 `fetch` / `watch` 在结束时自动输出 Parquet 或 XLSX。完整成功的 fetch、达到 duration/rounds 且完整成功的 watch，在输出成功后清理 SQLite；中断、异常、部分失败或输出失败保留 SQLite 供恢复。已完成的输出目录不能再次用于采集。
 
 Parquet 协议继续为 v2，点表、曲线身份、数值、标签、单位及查询采样语义不变；新数据包的 `raw_provenance` 为 null，查询定义、采样配置、状态和请求批次记录继续保留。历史 `raw/`、冻结数据库和 `samples/` 未因本次修改而删除或重写。
 
-Chrome 启动新增 `--disable-gpu`、`--disable-dev-shm-usage`、`--no-sandbox`。本次没有重新发起真实 Grafana 采集或完成服务器 Chrome 环境验收；不能用下面旧版本的真实验证记录声称这些新参数已经完成实际验收。
+合入子杰版的三个 Chrome 启动参数：`--disable-gpu`、`--disable-dev-shm-usage`、`--no-sandbox`，对有窗口和无窗口启动统一生效。本次核查的 Playwright 1.60.0 已默认包含后两项，因此这次显式添加不代表首次关闭沙箱，实际新增行为主要是禁用 GPU。本次没有重新发起真实 Grafana 采集或完成服务器 Chrome 环境验收；不能用下面旧版本的真实验证记录声称这些参数已经完成实际验收。
 
 使用 Python 3.12.14、显式 `PYTHONPATH=src` 执行 `python -m pytest -q -p no:cacheprovider`，**279 项测试通过**。已核对导入路径为当前仓库的 `src/grafana_collector`，避免误测虚拟环境中此前普通安装的版本。
 

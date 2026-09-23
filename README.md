@@ -2,9 +2,16 @@
 
 从内部 Grafana SDKv2 大盘下载历史指标，或持续增量采集，采集结束时默认输出程序可直接读取的 **Parquet 长表数据集**。支持本实例 OpenTSDB、Bosun、Grafana Math 和现有面板转换；Excel 可通过 `--format xlsx` 选择。项目可独立安装运行，不依赖 Codex。
 
-0.4.0 不再保存原始 HTTP 响应，并移除了独立的 `export` 命令。采集期间用 SQLite 保存进度；完整采集并成功输出后清理 SQLite，中断或失败时保留以便恢复。Parquet v2 的点值、曲线、标签、单位及查询语义保持不变。
-
 主仓库：[Codebase / jinpengbin/grafana-collector](https://code.byted.org/jinpengbin/grafana-collector)。
+
+## 0.4.0 变更
+
+- **合入三个 Chrome 启动参数**：`--disable-gpu`、`--disable-dev-shm-usage`、`--no-sandbox`，统一用于有窗口和无窗口模式，沿用子杰版的浏览器启动配置。参数作用与验证范围见下文。
+- **停止保存 raw**：不再创建原始 HTTP 响应文件；数据包继续保留查询定义、采样配置和状态。
+- **调整 SQLite 生命周期**：采集中保留，完整成功输出后清理；失败或中断时保留以便恢复。
+- **移除独立 `export` 命令**：由 `fetch` / `watch` 结束时自动输出 Parquet 或 Excel。
+
+Parquet v2 的点值、曲线、标签、单位及查询语义保持不变。
 
 ## 安装
 
@@ -35,7 +42,15 @@ grafana-collector fetch --config examples/sdkv2.toml
 
 工具会打开独立 Chrome 窗口。首次及登录失效时在该窗口完成登录，程序自动检测。`login` 不止检查页面，还会执行一条真实指标查询。登录状态保存在 `~/.local/share/grafana-collector/chrome-profile/`，不进入数据包。同一 profile 同时只能运行一个命令。
 
-Chrome 启动参数包含 `--disable-gpu`、`--disable-dev-shm-usage` 和 `--no-sandbox`，用于适配服务器运行环境；这些参数在 0.4.0 中加入，本次未重新进行真实 Chrome/Grafana 环境验收。
+0.4.0 在 `transport.py` 中显式加入以下三个 Chrome 启动参数。它们作用于 `login`、`inspect`、`fetch`、`watch` 的浏览器启动，有窗口和 `--headless` 模式均使用同一组参数：
+
+| 参数 | 作用 |
+| --- | --- |
+| `--disable-gpu` | 禁用 GPU 加速。 |
+| `--disable-dev-shm-usage` | 避免依赖 `/dev/shm`，用于共享内存受限的运行环境。 |
+| `--no-sandbox` | 关闭 Chromium 沙箱。 |
+
+在本次核查的 Playwright 1.60.0 中，后两项已属于当前启动配置的默认行为；此处将三个参数统一显式写入，新增行为主要是禁用 GPU。自动化测试已核对启动参数及视口、时区等配置，本次未重新进行真实 Chrome/Grafana 或服务器环境验收。
 
 可以先采集少量面板，或另设历史时间窗：
 
