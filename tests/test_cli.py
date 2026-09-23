@@ -1,11 +1,9 @@
 """CLI integration checks stay offline and never launch Chrome."""
 
-import json
 from pathlib import Path
 import sys
 from types import SimpleNamespace
 
-from openpyxl import load_workbook
 import pytest
 
 from grafana_collector import cli
@@ -49,7 +47,7 @@ def test_config_section_cli_precedence_paths_panels_and_time_aliases(tmp_path):
     assert parsed.poll_interval == "5m" and parsed.lookback == "5m"
 
 
-@pytest.mark.parametrize("option,value", [("--timeout", "0"), ("--concurrency", "0"), ("--retries", "-1"), ("--rounds", "0")])
+@pytest.mark.parametrize("option,value", [("--timeout", "0"), ("--concurrency", "0"), ("--retries", "-1"), ("--rounds", "0"), ("--duration", "0s")])
 def test_invalid_settings_fail_without_browser(option, value):
     with pytest.raises(CollectorError):
         args("watch", option, value)
@@ -60,7 +58,7 @@ def test_invalid_panel_filter_is_user_readable():
         args("fetch", "--panels", "one,two")
 
 
-@pytest.mark.parametrize("command", ["fetch", "watch", "export"])
+@pytest.mark.parametrize("command", ["fetch", "watch"])
 def test_export_format_defaults_to_parquet_and_accepts_xlsx(command):
     assert args(command).format == "parquet"
     assert args(command, "--format", "xlsx").format == "xlsx"
@@ -69,7 +67,7 @@ def test_export_format_defaults_to_parquet_and_accepts_xlsx(command):
     assert invalid.value.code == 2
 
 
-@pytest.mark.parametrize("command", ["fetch", "watch", "export"])
+@pytest.mark.parametrize("command", ["fetch", "watch"])
 def test_export_format_config_and_cli_precedence(tmp_path, command):
     config = tmp_path / "collector.toml"
     config.write_text(f'format = "parquet"\n[{command}]\nformat = "xlsx"\n', encoding="utf-8")
@@ -159,49 +157,14 @@ async def test_make_watch_plan_uses_launch_start_and_freezes_link_reference(monk
     assert plan["from_ms"] == 1789369200000
 
 
-def test_offline_export_command_never_opens_browser(tmp_path, monkeypatch, capsys):
+def test_removed_export_command_is_rejected_without_browser(monkeypatch):
     from grafana_collector import transport
     def forbidden(*args, **kwargs):
-        raise AssertionError("Offline export tried to start Chrome")
+        raise AssertionError("Removed command tried to start Chrome")
     monkeypatch.setattr(transport, "BrowserSession", forbidden)
-    run_dir, out_dir = tmp_path / "run", tmp_path / "export"
-    with Store(run_dir) as store:
-        store.initialize(saved_plan())
-        store.record_display(1, [{"ref_id": "A", "metric": "sample", "labels": {"host": "one"}, "name": "sample",
-                                  "unit": "bytes", "points": [[1789369200000, 7], [1789369260000, 8]]}],
-                             1789369200000, 1789369260000)
     with pytest.raises(SystemExit) as result:
-        cli.main(["export", "--run", str(run_dir), "--out", str(out_dir), "--panels", "1",
-                  "--from", "1789369260000", "--to", "1789369260000", "--format", "xlsx"])
-    assert result.value.code == 0
-    manifest = json.loads((out_dir / "manifest.json").read_text())
-    assert manifest["panels"][0]["selected_point_count"] == 1
-    book = load_workbook(out_dir / manifest["panels"][0]["files"][0]["path"])
-    assert book.active["B2"].value == 8
-    book.close()
-    assert "离线导出完成" in capsys.readouterr().out
-
-
-def test_offline_export_defaults_to_parquet_and_forwards_filters(tmp_path, monkeypatch, capsys):
-    from grafana_collector import exporting, transport
-    run_dir, out_dir = tmp_path / "run", tmp_path / "export"
-    with Store(run_dir) as store:
-        store.initialize(saved_plan())
-    def forbidden(*args, **kwargs):
-        raise AssertionError("Offline Parquet export tried to start Chrome")
-    monkeypatch.setattr(transport, "BrowserSession", forbidden)
-    calls = []
-    def write(store, out, **options):
-        calls.append((store.load_plan(), out, options))
-        return out / "manifest.json"
-    monkeypatch.setattr(exporting, "export_run", write)
-    with pytest.raises(SystemExit) as result:
-        cli.main(["export", "--run", str(run_dir), "--out", str(out_dir), "--panels", "1",
-                  "--from", "1789369260000", "--to", "1789369260000"])
-    assert result.value.code == 0
-    assert calls == [(saved_plan(), out_dir, {"format": "parquet", "from_ms": 1789369260000,
-                                            "to_ms": 1789369260000, "panel_ids": [1]})]
-    assert "离线导出完成（parquet）" in capsys.readouterr().out
+        cli.main(["export", "--run", "unused"])
+    assert result.value.code == 2
 
 
 @pytest.mark.asyncio
@@ -271,11 +234,11 @@ async def test_resume_rejects_mode_url_panel_and_range_changes_before_browser(tm
             await cli.run(args(*values, "--out", str(run_dir)))
 
 
-def test_main_reports_missing_run_without_traceback(capsys, tmp_path):
+def test_main_reports_missing_output_without_traceback(capsys):
     with pytest.raises(SystemExit) as result:
-        cli.main(["export", "--run", str(tmp_path / "missing")])
+        cli.main(["fetch", "--url", URL])
     assert result.value.code == 1
-    assert "--run" in capsys.readouterr().err
+    assert "--out" in capsys.readouterr().err
 
 
 @pytest.fixture

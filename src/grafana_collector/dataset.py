@@ -90,8 +90,9 @@ def read_provenance(path):
     contain ``metadata``, ``transformations``, and ordered ``query_keys``.
     Reads ``files.provenance`` relative to either manifest location, verifies
     its checksum when provided, and rejects a different schema or generation.
-    Raw response paths are source references; reading provenance does not
-    require the original run or raw response files to remain present.
+    Current packages contain no raw response paths. Older v2 packages may
+    retain them as source references; reading either form does not require
+    the original run or raw response files to remain present.
     """
     manifest, base = _load_manifest(path)
     info = manifest["files"]["provenance"]

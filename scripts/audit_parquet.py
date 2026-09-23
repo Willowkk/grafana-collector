@@ -89,6 +89,10 @@ def audit(run, manifest_path):
             attempts = [dict(zip(columns, row)) for row in rows]
             for attempt in attempts:
                 attempt["quality"] = json.loads(attempt["quality"])
+                # Current packages omit raw response references. Older v2
+                # generations retain them and must still match their source.
+                if provenance.get("raw_provenance") is None:
+                    attempt.pop("raw_path", None)
             check(saved.get("attempts") == attempts, f"query attempts changed: {key}")
             latest = attempts[-1] if attempts else {}
             expected_status = {

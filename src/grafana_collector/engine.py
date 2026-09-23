@@ -316,27 +316,35 @@ class Collector:
             next_due = max(started, dataset_start + poll_interval_ms)
         completed = 0
         reason = "rounds"
+        end_ms = dataset_start
         try:
             while rounds is None or completed < rounds:
                 if stop_event is not None and stop_event.is_set():
                     reason = "stopped"
                     break
                 now = self.clock()
-                if deadline is not None and (now >= deadline or next_due > deadline):
-                    if now < deadline and not await self._wait((deadline - now) / 1000, stop_event):
-                        reason = "stopped"
-                    else:
-                        reason = "duration"
-                    break
-                if next_due > now and not await self._wait((next_due - now) / 1000, stop_event):
+                # A duration ends with a final collection at its exact deadline,
+                # even when it falls before the first tick or between ticks.
+                due = min(next_due, deadline) if deadline is not None else next_due
+                if due > now and not await self._wait((due - now) / 1000, stop_event):
                     reason = "stopped"
                     break
                 now = self.clock()
-                result = await self._watch_round(now, stop_event)
-                if result is None:
+                target_end = min(now, deadline) if deadline is not None else now
+                if target_end > dataset_start:
+                    result = await self._watch_round(target_end, stop_event)
+                    if result is None:
+                        reason = "stopped"
+                        break
+                    completed += 1
+                    end_ms = target_end
+                if stop_event is not None and stop_event.is_set():
                     reason = "stopped"
                     break
-                completed += 1
+                if deadline is not None and target_end >= deadline:
+                    reason = "duration"
+                    end_ms = deadline
+                    break
                 # Never overlap or burst missed rounds; all gaps are in cursors.
                 next_due += poll_interval_ms
                 now = self.clock()
@@ -344,4 +352,4 @@ class Collector:
                     next_due += ((now - next_due) // poll_interval_ms + 1) * poll_interval_ms
         except asyncio.CancelledError:
             reason = "cancelled"
-        return {"rounds": completed, "reason": reason, "last": self.last_summary}
+        return {"rounds": completed, "reason": reason, "end_ms": end_ms, "last": self.last_summary}

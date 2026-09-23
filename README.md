@@ -1,12 +1,14 @@
 # SDKv2 Grafana 数据采集工具
 
-从内部 Grafana SDKv2 大盘下载历史指标，或在 Mac 上持续增量采集，默认导出程序可直接读取的 **Parquet 长表数据集**。支持本实例 OpenTSDB、Bosun、Grafana Math 和现有面板转换；Excel 可通过 `--format xlsx` 选择。项目可独立安装运行，不依赖 Codex。
+从内部 Grafana SDKv2 大盘下载历史指标，或持续增量采集，采集结束时默认输出程序可直接读取的 **Parquet 长表数据集**。支持本实例 OpenTSDB、Bosun、Grafana Math 和现有面板转换；Excel 可通过 `--format xlsx` 选择。项目可独立安装运行，不依赖 Codex。
+
+0.4.0 不再保存原始 HTTP 响应，并移除了独立的 `export` 命令。采集期间用 SQLite 保存进度；完整采集并成功输出后清理 SQLite，中断或失败时保留以便恢复。Parquet v2 的点值、曲线、标签、单位及查询语义保持不变。
 
 主仓库：[Codebase / jinpengbin/grafana-collector](https://code.byted.org/jinpengbin/grafana-collector)。
 
 ## 安装
 
-采集需要 **Python 3.11 或以上**、Google Chrome，以及能访问 `grafana.byted.org` 的网络；离线导出和读取 Parquet 不需要 Chrome 或 Grafana 网络。macOS 的 `/usr/bin/python3` 可能是旧版本，请先检查版本。以下以 Python 3.12 为例：
+采集需要 **Python 3.11 或以上**、Google Chrome，以及能访问 `grafana.byted.org` 的网络；读取已有 Parquet 数据包不需要 Chrome 或 Grafana 网络。macOS 的 `/usr/bin/python3` 可能是旧版本，请先检查版本。以下以 Python 3.12 为例：
 
 ```bash
 git clone https://code.byted.org/jinpengbin/grafana-collector.git
@@ -32,6 +34,8 @@ grafana-collector fetch --config examples/sdkv2.toml
 ```
 
 工具会打开独立 Chrome 窗口。首次及登录失效时在该窗口完成登录，程序自动检测。`login` 不止检查页面，还会执行一条真实指标查询。登录状态保存在 `~/.local/share/grafana-collector/chrome-profile/`，不进入数据包。同一 profile 同时只能运行一个命令。
+
+Chrome 启动参数包含 `--disable-gpu`、`--disable-dev-shm-usage` 和 `--no-sandbox`，用于适配服务器运行环境；这些参数在 0.4.0 中加入，本次未重新进行真实 Chrome/Grafana 环境验收。
 
 可以先采集少量面板，或另设历史时间窗：
 
@@ -61,9 +65,15 @@ grafana-collector watch --config examples/sdkv2.toml \
   --poll-interval 1m --lookback 10m --rounds 3 --out runs/three-rounds
 ```
 
-按 **Ctrl+C** 正常停止并导出。`--duration 1h` 或 `--rounds 3` 也会自动停止。睡眠、断网或异常退出后，重新执行相同命令和 `--out`，工具使用已保存的看板、变量、采样设置及逐查询进度补齐缺口；中断超过 30 分钟也不丢弃更早的未采区间。恢复不重新解释 `now`，不要再传 `--since` 或修改起止时间。
+按 **Ctrl+C** 或发送 SIGTERM 会停止采集，尝试输出已保存的数据，并保留 SQLite 供恢复。使用 `--duration 1h` 或 `--rounds 3` 达到预定终点，且所有面板采集完整、输出成功时，才清理 SQLite。`fetch` 完整成功后也执行同样的清理。
+
+`--duration` 到期会补采至截止时刻，包含不足一个轮询周期的尾段；时长短于首次轮询时，也只查询启动后至截止时刻的数据。采样间隔保持冻结，网络查询和输出耗时可能使实际退出晚于指定时长。
+
+睡眠、断网、部分失败或异常退出后，重新执行相同命令和 `--out`，工具使用保留的 SQLite 中已保存的看板、变量、采样设置及逐查询进度补齐缺口；中断超过 30 分钟也不丢弃更早的未采区间。恢复不重新解释 `now`，不要再传 `--since` 或修改起止时间。导出失败时同样保留 SQLite。
 
 同一输出目录冻结 URL、面板选择、轮询和回查配置。更改这些设置请使用新目录。真实失败不推进该查询的成功边界，成功空响应则记录为 `empty`。认证不能恢复时停止采集并保留进度；已有登录状态时可用 `--headless`，需要重新登录时重新运行有窗口的命令。
+
+完整成功后，输出目录只用于读取和交付；再次用该目录执行 `fetch` 或 `watch` 会报错，必须指定新的 `--out`。这避免将原来的 `now` 解释为新时间或覆盖已完成的数据包。已有历史 `raw/`、SQLite 和样本不会因升级而被批量删除或重写。
 
 ## 数据口径
 
@@ -71,37 +81,30 @@ grafana-collector watch --config examples/sdkv2.toml \
 - 固定 1440×900 视口测量面板实际宽度，并校验当前 Grafana 7 的 24 列、8px 间距布局。随后冻结 `maxDataPoints` 和数据源/面板最小间隔。显式降采样和禁用降采样查询仍遵循原配置。
 - 每轮是完整查询窗口。首版不自动切分历史长窗口，避免 TopK、rate 或 Bosun 计算因切片而改变含义。过大请求会明确失败；可以主动选择较小的业务时间段，但这些是独立窗口。
 - 默认不采隐藏 target，公式需要的隐藏输入仍会获取。Math 和 `calculateField` 在标签与时间戳对齐后计算；缺失或零分母输出空值。
-- 成功响应是其请求窗口的最新观察：替换该查询窗口内的旧标准化点，保留窗口外的历史。合法空响应同样替换对应窗口；失败不会删除历史。所有原始批次仍保留，可追溯修订。
+- 成功响应是其请求窗口的最新观察：替换该查询窗口内的旧标准化点，保留窗口外的历史。合法空响应同样替换对应窗口；失败不会删除历史。保存查询定义、采样设置、请求状态和覆盖记录，不保存原始 HTTP 响应。
 - TopK 是每次查询窗口内的筛选。累计结果不是重新对累计大窗口求 TopK，曲线数量可能超过 K。需要完整时间窗的 Grafana 口径请用 `fetch`。
 - 筛选变量是否实际作用于某面板，取决于原查询。某些面板固定通配符或没有 filesystem/task_id 条件，工具如实保存其实际范围。
 - 单位跟随面板轴和曲线覆盖配置。API QPS 不会改名为磁盘 IOPS，已聚合的 P99 不会被宣称为全局请求 P99。
 
-## 离线导出与文件结构
+## 自动输出与文件结构
 
-```bash
-grafana-collector export --run runs/live --out runs/live
-grafana-collector export --run runs/history --out runs/history-subset \
-  --panels 166 --from '2026-09-14T16:00:00+08:00' --to '2026-09-14T17:00:00+08:00'
-```
-
-`fetch`、`watch`、`export` 默认 `--format parquet`，支持 TOML 的 `format` 设置，命令行优先。`export` 不需要 Chrome 或网络；旧版本采集的 SQLite 可以直接导出新格式，无需重新采集。运行目录中有：
+`fetch`、`watch` 结束时自动输出，默认 `--format parquet`，支持 TOML 的 `format` 设置，命令行优先。0.4.0 没有独立的离线导出命令；格式和采集范围应在启动时选定。Parquet 运行目录结构为：
 
 ```text
 运行目录/
-  collection.sqlite3          # 冻结配置、标准化时序、状态和恢复进度
-  raw/                        # 每次请求对应的压缩原始响应
+  collection.sqlite3          # 仅采集中或待恢复时保留；完整成功输出后清理
   manifest.json               # 最近一次完整导出的索引和状态
   exports/<导出批次>/
     points.parquet            # 全部所选面板的实际数据点
     series.parquet            # 曲线名称、完整标签及单位
     manifest.json             # 精简索引、面板信息与状态，路径相对此文件
-    provenance.json.gz        # 冻结看板、完整采样配置、查询定义和批次来源
+    provenance.json.gz        # 冻结看板、完整采样配置、查询定义和请求状态
     README.md                 # 数据协议和读取说明
 ```
 
-每次导出读取同一个 SQLite 快照，写入独立批次目录后再原子更新外层 `manifest.json`。旧批次文件保留，导出失败不会替换上次有效清单；本版本读取器仅接受 v2 数据包。交付数据时复制整个 `exports/<导出批次>/` 即可，里面的清单和文件可独立使用。外层清单通过 `files.points.path`、`files.series.path` 指向最近一次导出的文件，不要自行拼接文件名。
+每次输出读取同一个 SQLite 快照，写入独立批次目录后再原子更新外层 `manifest.json`。旧批次文件保留，输出失败不会替换上次有效清单，也不会清理 SQLite；本版本读取器仅接受 v2 数据包。交付数据时复制整个 `exports/<导出批次>/` 即可，里面的清单和文件可独立使用，不需要 SQLite。外层清单通过 `files.points.path`、`files.series.path` 指向最近一次输出的文件，不要自行拼接文件名。
 
-当前 v2 完整真实样本见 `samples/parquet_v2_20260914_1500_2100/`；原 `samples/parquet_20260914_1500_2100/` 仅保留作 v1 历史对照，不支持通过当前读取器读取。新格式的同源数据包实测从 5.95 MB 降至 1.04 MB，减少 82.55%；点数和数值未变。详细范围、体积和验证记录见 `samples/README.md`、`VALIDATION.md`。
+0.3.0 的 v2 完整真实样本见 `samples/parquet_v2_20260914_1500_2100/`，0.4.0 仍可读取；原 `samples/parquet_20260914_1500_2100/` 仅保留作 v1 历史对照，不支持通过当前读取器读取。0.3.0 验证中，同源数据包从 5.95 MB 降至 1.04 MB，减少 82.55%；点数和数值未变。这些历史样本保持原样，详细范围、体积和验证记录见 `samples/README.md`、`VALIDATION.md`。
 
 ### Parquet 数据协议
 
@@ -140,11 +143,11 @@ v2 用以下字段保留结构化列以外的来源信息，避免再序列化�
 
 完整来源放在 `files.provenance.path` 指向的 `provenance.json.gz` 中。其 `dashboard` 保存冻结看板，`sampling` 保存完整采样配置，`queries` 按 `query_key` 存储一次查询定义及状态、进度和请求批次，`panels` 按面板 ID 的字符串存储面板元信息、转换和 `query_keys`。清单中每个面板的 `query_keys` 引用同一查询字典；实际查询间隔见 `queries[query_key].definition.interval_ms`，显式降采样等设置见该定义及其 `metadata`。不要根据轮询周期推断采样间隔。
 
-追溯信息记录原始响应的本地路径，不会把运行目录的 `raw/` 再复制进五文件数据包。离线分析点值、标签和查询定义只需要完整数据包；核对原始 HTTP 响应时还需保留原运行目录。来源记录到查询/批次级，不承诺每个点唯一对应某个响应批次。
+0.4.0 新数据包的 `raw_provenance` 为 null，批次记录不再输出 `raw_path`，不保存原始 HTTP 响应及其路径。SQLite 内部保留兼容旧库的列，新请求填 null。查询定义、采样设置、查询状态和请求批次记录仍保留。来源记录到查询/批次级，不承诺每个点唯一对应某个响应批次。已有历史数据包中的 raw 来源字段保留原样。
 
 `collection_status` 是运行的采集状态，`range_status` 是本次导出范围的覆盖情况（`covered`、`partial`、`uncollected`）；`display_coverage` 列出实际已计算的时间区间。导出操作完成不代表该时间范围数据完整，应同时查看这些状态。
 
-持续模式仍先写 SQLite，正常停止时导出累计快照。回查产生的新增、修订和删除先在 SQLite 中处理，因此下游不应把多个导出快照直接追加：同一批次内部已经去重，后一个完整快照用于替换前一个。首版不提供逐轮变更流。
+持续模式先写 SQLite，结束或中断时输出累计快照。回查产生的新增、修订和删除先在 SQLite 中处理，因此下游不应把多个快照直接追加：同一批次内部已经去重，后一个完整快照用于替换前一个。没有逐轮变更流；中断输出也不表示整个采集已完成。
 
 ### 读取示例
 
@@ -174,25 +177,16 @@ python examples/read_parquet.py runs/history --panel 166 --tag method=cfs_pread 
   --from '2026-09-14T16:00:00+08:00' --to '2026-09-14T17:00:00+08:00'
 ```
 
-### 从已有采集记录导出 v2
+### 从 0.3.0 升级
 
-本版本只读写 `schema_version=2` 的 Parquet 数据包，v1 及其他版本均不受支持。已有下游程序需要更新为 v2 字段：面板标题和分组关联清单，查询定义/采样详情读取压缩来源文件，质量信息使用上述专用列。
+0.4.0 移除了 CLI `export` 命令和 TOML 的 `[export]` 用法。采集脚本应改为由 `fetch` 或 `watch` 自动输出，并在启动时传入 `--format`；成功完成后的目录不能再用作新一次采集。依赖独立离线重导出旧 SQLite 的工作流应继续使用对应旧版本，或先调整工作流再升级。
 
-手上有 `collection.sqlite3` 时，可在升级安装后离线导出到一个新目录：
-
-```bash
-python -m pip install .
-grafana-collector export --run runs/history-20260914-1500-2100 \
-  --out runs/history-20260914-1500-2100-v2 --format parquet
-python examples/read_parquet.py runs/history-20260914-1500-2100-v2 --panel 166 --limit 5
-```
-
-无需重新登录或查询 Grafana。SQLite 存储格式未变，新导出保留曲线 ID、时间戳、数值、null、标签和单位口径，只调整导出布局；不会改变采样精度或补出原本不存在的数据点。仅持有旧版 Parquet 数据包时，请向提供方索取 v2 数据包；`export --run` 需要 SQLite，不能把只含 Parquet 的样本目录当成采集运行目录。
+Parquet 协议继续使用 `schema_version=2`。已有 v2 数据包及读取代码不需要迁移；v1 及其他版本仍不受当前读取器支持。历史 `raw/`、冻结数据库和随库样本保持原样，升级不会将它们转换为新数据包。待恢复运行仍使用其已冻结的查询与采样设置，恢复后新请求不再写 raw。
 
 ### 可选 Excel
 
 ```bash
-grafana-collector export --run runs/history --out runs/history-excel --format xlsx
+grafana-collector fetch --config examples/sdkv2.toml --out runs/history-excel --format xlsx
 ```
 
 Excel 保留 0.1.1 版规则：按分组每面板一个工作簿，白底表头，Time 加各曲线，缺失留空。同一面板统一 Grafana 显示单位，单元格仍为数字。Excel 的日期按北京时间显示；文件名为 `面板名-data-export.xlsx`，冲突或超出行列限制自动区分/拆分。Excel 使用独立清单结构；下游机器读取请选择 Parquet。
@@ -203,9 +197,10 @@ Excel 保留 0.1.1 版规则：按分组每面板一个工作簿，白底表头�
 - **某些面板没有数据：** 先核对同时间、同变量的 Grafana。`empty` 与查询失败不同，缺点也不代表零。
 - **启动 profile 失败：** 关闭其他使用同一专用 profile 的采集命令。不要将日常浏览器的默认用户目录传给 `--profile`。
 - **持续模式数据稀疏：** 检查固定的降采样间隔、实际上报频率和回查范围，不能只调整轮询频率就期望新增更细的上报数据。
-- **导出失败：** 查看错误信息及 `manifest.json` 中面板状态；已保存的数据可修复后重新离线导出。导出大整数精度错误时读取 SQLite/原始响应，不要自行转为浮点后忽略精度丢失。
+- **输出目录已完成：** 用新的 `--out` 开始新采集；读取已交付数据请使用数据包读取函数。
+- **导出失败：** 查看错误信息及已有 `manifest.json` 中面板状态。SQLite 会保留；修复原因后用原采集命令和相同 `--out` 恢复，结束时再次自动输出。大整数精度错误需要修正数据或导出处理，不要转为浮点后忽略精度丢失。
 
-退出码：`0` 命令操作完成，`1` 配置/认证/运行错误，`2` 为 fetch/watch 存在失败或未完成面板，或 inspect 发现不支持查询，`130` 被中断。离线 export 返回 `0` 表示导出文件已写入，数据完整性另见清单。正常 watch 停止会先导出。日志不输出 Cookie、密码或 Authorization。
+退出码：`0` 命令操作完成，`1` 配置/认证/运行错误，`2` 为 fetch/watch 存在失败或未完成面板，或 inspect 发现不支持查询，`130` 被中断。数据完整性以清单中的状态和覆盖范围为准；文件存在不代表完整成功。日志不输出 Cookie、密码或 Authorization。
 
 ## 验证与维护
 
@@ -214,6 +209,6 @@ python -m pytest -q
 python -m pip wheel . --no-deps -w dist
 ```
 
-测试使用合成响应，覆盖变量替换、真实版本自动间隔阈值、查询协议、公式、独立进度、迟到修订、TopK、断网重试、认证暂停、长时间中断恢复、停止与两种格式导出。真实采集核对见 `VALIDATION.md`。
+测试使用合成响应，覆盖变量替换、真实版本自动间隔阈值、查询协议、公式、独立进度、迟到修订、TopK、断网重试、认证暂停、长时间中断恢复、停止与两种格式输出。历史真实采集核对及 0.4.0 的验证范围见 `VALIDATION.md`。
 
 模块职责：`query.py` 编译和计算；`transport.py` 登录与接口；`engine.py` 增量调度；`storage.py` 持久化；`exporting.py` 格式分发；`parquet_exporter.py` Parquet 协议；`dataset.py` v2 数据包读取；`exporter.py` Excel；`units.py` Grafana 单位与数字格式；`cli.py` 命令入口。若内部 Grafana 插件或布局变化，应先更新对应适配和对照测试，再使用新运行目录采集。

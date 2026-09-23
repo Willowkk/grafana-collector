@@ -118,6 +118,7 @@ async def test_no_history_waits_then_uses_own_cursor_and_survives_restart(open_s
     summary = await collector.watch(rounds=3)
 
     assert summary["rounds"] == 3
+    assert summary["end_ms"] == BASE + 3 * FIVE_MINUTES
     assert transport.calls == [
         ("1-A", BASE, BASE + FIVE_MINUTES, 60_000),
         ("1-A", BASE, BASE + 2 * FIVE_MINUTES, 60_000),
@@ -352,7 +353,7 @@ async def test_stop_mid_round_keeps_finished_queries_and_cancels_others(open_sto
         return {"points": [[start + 1, 1]]}
 
     collector = Collector(plan, store, Transport(handler), clock=clock, sleep=clock.sleep)
-    task = asyncio.create_task(collector.watch(rounds=5, stop_event=stop))
+    task = asyncio.create_task(collector.watch(rounds=5, duration_seconds=900, stop_event=stop))
     await blocked.wait()
     while store.get_cursor("1-A") is None:
         await asyncio.sleep(0)
@@ -363,6 +364,7 @@ async def test_stop_mid_round_keeps_finished_queries_and_cancels_others(open_sto
     assert store.get_cursor("2-B") is None
     assert store.get_display_series(1)
     assert not store.get_display_series(2)
+    assert all(call[2] == BASE + FIVE_MINUTES for call in collector.transport.calls)
 
 
 async def test_cancel_watch_returns_for_cli_export(open_store):
@@ -376,13 +378,14 @@ async def test_cancel_watch_returns_for_cli_export(open_store):
         await asyncio.Event().wait()
 
     collector = Collector(plan, store, Transport(handler), clock=clock, sleep=clock.sleep)
-    task = asyncio.create_task(collector.watch())
+    task = asyncio.create_task(collector.watch(duration_seconds=900))
     await blocked.wait()
     task.cancel()
     summary = await task
     assert summary["reason"] == "cancelled"
     assert store.get_cursor("1-A") is None
     assert summary["last"]["cancelled"] is True
+    assert len(collector.transport.calls) == 1
 
 
 async def test_duration_before_first_due_does_not_manufacture_history(open_store):
@@ -392,9 +395,73 @@ async def test_duration_before_first_due_does_not_manufacture_history(open_store
     transport = Transport()
     result = await Collector(plan, store, transport, clock=clock, sleep=clock.sleep).watch(duration_seconds=60)
     assert result["reason"] == "duration"
+    assert result["rounds"] == 1
+    assert result["end_ms"] == BASE + 60_000
+    assert transport.calls == [("1-A", BASE, BASE + 60_000, 60_000)]
+    assert store.display_coverage(1, BASE, result["end_ms"])["status"] == "covered"
+    assert clock.delays == [60]
+
+
+@pytest.mark.parametrize("duration_seconds, expected_ends, expected_delays", [
+    (600, [300_000, 600_000], [300, 300]),
+    (650, [300_000, 600_000, 650_000], [300, 300, 50]),
+])
+async def test_duration_covers_exact_deadline_without_duplicate_final_round(
+        open_store, duration_seconds, expected_ends, expected_delays):
+    plan = make_plan()
+    store = open_store(plan)
+    clock = Clock()
+    transport = Transport()
+    result = await Collector(plan, store, transport, clock=clock, sleep=clock.sleep).watch(
+        duration_seconds=duration_seconds)
+    assert result["reason"] == "duration"
+    assert result["rounds"] == len(expected_ends)
+    assert result["end_ms"] == BASE + duration_seconds * 1000
+    assert [call[2] - BASE for call in transport.calls] == expected_ends
+    assert clock.delays == expected_delays
+    assert store.get_cursor("1-A") == result["end_ms"]
+    assert store.display_coverage(1, BASE, result["end_ms"])["status"] == "covered"
+
+
+async def test_duration_slow_request_catches_up_only_to_deadline(open_store):
+    plan = make_plan()
+    store = open_store(plan)
+    clock = Clock()
+
+    async def handler(query, start, end):
+        clock.now += 700_000
+        return {"points": [[start + 1, 1]]}
+
+    transport = Transport(handler)
+    result = await Collector(plan, store, transport, clock=clock, sleep=clock.sleep).watch(
+        duration_seconds=650)
+    assert result["reason"] == "duration"
+    assert result["end_ms"] == BASE + 650_000
+    assert [call[2] - BASE for call in transport.calls] == [300_000, 650_000]
+    assert store.display_coverage(1, BASE, result["end_ms"])["status"] == "covered"
+
+
+@pytest.mark.parametrize("interruption", ["stopped", "cancelled"])
+async def test_duration_interrupted_while_waiting_does_not_collect_final_window(open_store, interruption):
+    plan = make_plan()
+    store = open_store(plan)
+    clock = Clock()
+    transport = Transport()
+    stop = asyncio.Event()
+
+    async def interrupted_sleep(seconds):
+        clock.now += int(seconds * 1000)
+        if interruption == "stopped":
+            stop.set()
+        else:
+            raise asyncio.CancelledError()
+
+    result = await Collector(plan, store, transport, clock=clock, sleep=interrupted_sleep).watch(
+        duration_seconds=60, stop_event=stop if interruption == "stopped" else None)
+    assert result["reason"] == interruption
     assert result["rounds"] == 0
     assert not transport.calls
-    assert clock.delays == [60]
+    assert store.get_cursor("1-A") is None
 
 
 async def test_slow_rounds_do_not_overlap_or_replay_missed_ticks(open_store):
@@ -546,4 +613,7 @@ async def test_topk_membership_changes_and_empty_replace_only_latest_window(open
     assert latest["queries"] == {"empty": 1}
     assert latest["panels"] == {"empty": 1}
     assert store.get_cursor(query["key"]) == BASE + 1_200_000
-    assert len(list(store.raw_dir.glob("*.json.gz"))) == 3
+    assert not (store.run_dir / "raw").exists()
+    attempts = store.query_statuses()[0]["attempts"]
+    assert [attempt["status"] for attempt in attempts] == ["success", "success", "empty"]
+    assert all("raw_path" not in attempt for attempt in attempts)

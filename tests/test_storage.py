@@ -84,25 +84,80 @@ def test_success_replaces_topk_window_and_empty_clears_only_queried_range(store)
 
 def test_query_points_attempt_cursor_are_transactional(store):
     store.record_result(query(), 1000, 2000, [series([[1000, 1]])], [])
-    raw_before = list(store.raw_dir.iterdir())
+    statuses_before = store.query_statuses()
+    series_before = store.get_query_series("q1")
     with pytest.raises(ValueError, match="numbers"):
-        store.record_result(query(), 1000, 5000, [series([[1000, 88], [2000, "broken"]])], {"test": "raw"})
-    assert list(store.raw_dir.iterdir()) == raw_before
+        store.record_result(query(), 1000, 5000,
+                            [series([[1000, 88]]), series([[2000, "broken"]], {"host": "new"})],
+                            {"test": "raw"})
+    assert not (store.run_dir / "raw").exists()
     assert store.get_cursor("q1") == 2000
-    assert len(store.query_statuses()[0]["attempts"]) == 1
-    assert store.get_query_series("q1")[0]["points"] == [[1000, 1]]
+    assert store.query_statuses() == statuses_before
+    assert store.get_query_series("q1") == series_before
+    assert store.connection.execute("SELECT COUNT(*) FROM series").fetchone()[0] == 1
 
 
-def test_raw_gzip_redacts_credentials_and_marks_nonfinite(store):
+def test_query_result_rolls_back_points_attempt_and_cursor_on_storage_failure(store, monkeypatch):
+    store.record_result(query(), 1000, 2000, [series([[1000, 1]])], [])
+    statuses_before = store.query_statuses()
+    series_before = store.get_query_series("q1")
+    advance_cursor = store._advance_cursor
+
+    def fail_after_cursor_update(query_key, dataset_start):
+        advance_cursor(query_key, dataset_start)
+        raise RuntimeError("Simulated storage failure")
+
+    monkeypatch.setattr(store, "_advance_cursor", fail_after_cursor_update)
+    with pytest.raises(RuntimeError, match="storage failure"):
+        store.record_result(query(), 1000, 5000, [series([[1000, 88], [2000, 99]])],
+                            {"test": "raw"})
+    assert store.get_cursor("q1") == 2000
+    assert store.query_statuses() == statuses_before
+    assert store.get_query_series("q1") == series_before
+
+
+def test_raw_response_is_not_persisted_and_nonfinite_quality_is_preserved(store):
+    assert not (store.run_dir / "raw").exists()
     store.record_result(query(), 1000, 3000, [series([[1000, float("nan")], [2000, 0]])],
-                        {"headers": {"Authorization": "secret", "Cookie": "session"}, "data": [1, 2]})
+                        {"headers": {"Authorization": "response-secret", "Cookie": "response-session"},
+                         "data": "UNPERSISTED_RESPONSE_PAYLOAD"})
     attempt = store.query_statuses()[0]["attempts"][0]
-    with gzip.open(store.run_dir / attempt["raw_path"], "rt") as source:
-        raw = json.load(source)
-    assert raw["headers"] == {"Authorization": "[REDACTED]", "Cookie": "[REDACTED]"}
-    assert raw["data"] == [1, 2]
+    assert "raw_path" not in attempt
+    assert store.connection.execute("SELECT raw_path FROM attempts").fetchone()[0] is None
+    assert not (store.run_dir / "raw").exists()
+    assert {path.name for path in store.run_dir.iterdir()} <= {
+        "collection.sqlite3", "collection.sqlite3-wal", "collection.sqlite3-shm"}
+    for path in store.run_dir.iterdir():
+        persisted = path.read_bytes()
+        for marker in (b"UNPERSISTED_RESPONSE_PAYLOAD", b"response-secret", b"response-session"):
+            assert marker not in persisted
     assert attempt["quality"]["nonfinite_points"] == 1
     assert store.get_query_series("q1")[0]["points"] == [[1000, None], [2000, 0]]
+
+
+def test_legacy_raw_files_and_database_paths_are_untouched_but_not_advertised(tmp_path):
+    run_dir = tmp_path / "legacy-run"
+    raw_file = run_dir / "raw" / "legacy.json.gz"
+    with Store(run_dir) as store:
+        store.initialize(plan())
+        store.record_result(query(), 1000, 2000, [series([[1000, 1]])], None)
+        raw_file.parent.mkdir()
+        with gzip.open(raw_file, "wt", encoding="utf-8") as output:
+            json.dump({"legacy_response": True}, output)
+        legacy_bytes = raw_file.read_bytes()
+        with store.connection:
+            store.connection.execute("UPDATE attempts SET raw_path=?", ("raw/legacy.json.gz",))
+    with Store(run_dir) as resumed:
+        resumed.initialize(plan())
+        assert resumed.get_cursor("q1") == 2000
+        resumed.record_result(query(), 2000, 3000, [series([[2000, 2]])], {"new_response": True})
+        assert resumed.get_cursor("q1") == 3000
+        assert resumed.get_query_series("q1")[0]["points"] == [[1000, 1], [2000, 2]]
+        assert all("raw_path" not in attempt for attempt in resumed.query_statuses()[0]["attempts"])
+        assert [row[0] for row in resumed.connection.execute("SELECT raw_path FROM attempts ORDER BY id")] == [
+            "raw/legacy.json.gz", None]
+        assert list(raw_file.parent.iterdir()) == [raw_file]
+        assert raw_file.read_bytes() == legacy_bytes
 
 
 def test_display_refresh_replaces_range_and_preserves_other_history(store):

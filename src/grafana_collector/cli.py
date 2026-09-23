@@ -1,4 +1,4 @@
-"""Public CLI. All network operations are explicit commands; export is offline."""
+"""Collect and export snapshots, retaining SQLite only for unfinished runs."""
 from __future__ import annotations
 
 import argparse
@@ -21,22 +21,20 @@ def parser():
     root.add_argument("--version", action="version", version=__version__)
     sub = root.add_subparsers(dest="command", required=True)
     for name, help_text in (("login", "浏览器登录并验证真实查询"), ("inspect", "查看查询口径"),
-                            ("fetch", "历史下载并导出 Parquet 或 Excel"), ("watch", "持续增量采集"),
-                            ("export", "从本地运行记录离线导出 Parquet 或 Excel")):
+                            ("fetch", "历史下载并导出 Parquet 或 Excel"), ("watch", "持续增量采集")):
         p = sub.add_parser(name, help=help_text)
         p.add_argument("--config", type=Path, help="TOML 配置文件；命令行参数优先")
-        p.add_argument("--out", type=Path, help="运行/导出目录；inspect 可指定 JSON 文件")
+        p.add_argument("--out", type=Path, help="运行目录；已完成的目录不能复用；inspect 可指定 JSON 文件")
         p.add_argument("--panels", help="面板 ID，逗号分隔，例如 166,70,461")
-        if name in {"fetch", "watch", "export"}:
+        if name in {"fetch", "watch"}:
             p.add_argument("--format", choices=EXPORT_FORMATS,
                            help="输出格式，默认 parquet；xlsx 导出带 Grafana 单位的 Excel")
-        if name != "export":
-            p.add_argument("--url", help="带时间窗和筛选变量的 Grafana 大盘链接")
-            p.add_argument("--profile", type=Path, help="专用 Chrome profile 目录")
-            p.add_argument("--headless", action="store_true", default=None, help="已有登录状态时后台运行；过期会退出保留进度")
-            p.add_argument("--login-timeout", type=float, help="等待手动登录秒数，默认 600")
-            p.add_argument("--timeout", type=float, help="单次请求秒数，默认 30")
-        if name in {"fetch", "export"}:
+        p.add_argument("--url", help="带时间窗和筛选变量的 Grafana 大盘链接")
+        p.add_argument("--profile", type=Path, help="专用 Chrome profile 目录")
+        p.add_argument("--headless", action="store_true", default=None, help="已有登录状态时后台运行；过期会退出保留进度")
+        p.add_argument("--login-timeout", type=float, help="等待手动登录秒数，默认 600")
+        p.add_argument("--timeout", type=float, help="单次请求秒数，默认 30")
+        if name == "fetch":
             p.add_argument("--from", dest="from_value", help="开始时间，未带时区时按北京时间")
             p.add_argument("--to", dest="to_value", help="结束时间，未带时区时按北京时间")
         if name in {"fetch", "watch"}:
@@ -48,8 +46,6 @@ def parser():
             p.add_argument("--lookback", help="迟到数据回查范围，默认 5m，可设 0s")
             p.add_argument("--rounds", type=int, help="采集指定轮数后正常停止并导出")
             p.add_argument("--duration", help="运行指定时长后正常停止，例如 1h")
-        if name == "export":
-            p.add_argument("--run", type=Path, help="已有 collection.sqlite3 的运行目录")
     return root
 
 
@@ -73,10 +69,10 @@ def settings(args):
     for key, value in defaults.items():
         if values.get(key) is None:
             values[key] = value
-    if args.command in {"fetch", "watch", "export"}:
+    if args.command in {"fetch", "watch"}:
         selected_format = values.get("format")
         values["format"] = validate_format(DEFAULT_FORMAT if selected_format is None else selected_format)
-    for key in ("profile", "out", "run"):
+    for key in ("profile", "out"):
         if values.get(key):
             values[key] = Path(values[key]).expanduser()
     panels = values.get("panels")
@@ -91,6 +87,8 @@ def settings(args):
         raise CollectorError("超时、并发必须为正数，重试次数不能为负数。")
     if values.get("rounds") is not None and values["rounds"] < 1:
         raise CollectorError("--rounds 必须大于 0。")
+    if values.get("duration") is not None and duration_ms(values["duration"]) <= 0:
+        raise CollectorError("--duration 必须大于 0。")
     values["provided"] = provided
     return argparse.Namespace(**values)
 
@@ -157,19 +155,11 @@ async def run(args):
     from .storage import Store
     from .exporting import export_run
     started_ms = time.time_ns() // 1_000_000
-    if args.command == "export":
-        if not args.run or not (args.run / "collection.sqlite3").is_file():
-            raise CollectorError("--run 必须指向已有 collection.sqlite3 的运行目录。")
-        with Store(args.run) as store:
-            manifest = export_run(store, args.out or args.run,
-                                  from_ms=parse_time(args.from_value, now_ms=started_ms) if args.from_value else None,
-                                  to_ms=parse_time(args.to_value, now_ms=started_ms) if args.to_value else None,
-                                  panel_ids=args.panel_ids, format=args.format)
-        emit(f"离线导出完成（{args.format}）：{manifest}")
-        return 0
     if args.command in {"fetch", "watch"} and not args.out:
         raise CollectorError("请用 --out 指定本次运行的数据目录。")
     saved = read_saved_plan(args.out) if args.command in {"fetch", "watch"} else None
+    if args.command in {"fetch", "watch"} and saved is None and (args.out / "manifest.json").exists():
+        raise CollectorError("该目录已有导出结果但没有可恢复的 SQLite，请使用新的 --out 目录。")
     if saved:
         if saved["mode"] != args.command:
             raise CollectorError("输出目录属于另一种采集模式，请使用新目录。")
@@ -190,6 +180,7 @@ async def run(args):
     if duration_ms(args.poll_interval) <= 0:
         raise CollectorError("轮询周期必须大于 0。")
     from .transport import BrowserSession
+    cleanup_path = None
     async with BrowserSession(args.url, profile=args.profile, headless=args.headless,
                               login_timeout=args.login_timeout, request_timeout=args.timeout, progress=emit) as session:
         if saved:
@@ -233,6 +224,7 @@ async def run(args):
             collector = Collector(plan, store, session, concurrency=args.concurrency, timeout=args.timeout,
                                   retries=args.retries, lookback_ms=plan["metadata"]["lookback_ms"], progress=emit)
             interrupted = False
+            target_end = int(plan["to_ms"])
             try:
                 if args.command == "fetch":
                     await collector.collect_until(plan["to_ms"])
@@ -243,13 +235,17 @@ async def run(args):
                     for sig in (signal.SIGINT, signal.SIGTERM):
                         previous[sig] = signal.getsignal(sig)
                         loop.add_signal_handler(sig, stop.set)
-                    emit("持续采集已启动。按 Ctrl+C 正常停止并导出。")
+                    emit("持续采集已启动。按 Ctrl+C 中断、导出并保留恢复进度。")
                     try:
-                        await collector.watch(poll_interval_ms=plan["metadata"]["poll_interval_ms"],
-                                              rounds=args.rounds,
-                                              duration_seconds=duration_ms(args.duration) / 1000 if args.duration else None,
-                                              stop_event=stop)
+                        result = await collector.watch(poll_interval_ms=plan["metadata"]["poll_interval_ms"],
+                                                       rounds=args.rounds,
+                                                       duration_seconds=duration_ms(args.duration) / 1000 if args.duration else None,
+                                                       stop_event=stop)
+                        if result:
+                            interrupted = result["reason"] in {"stopped", "cancelled"}
+                            target_end = result["end_ms"]
                     finally:
+                        interrupted = interrupted or stop.is_set()
                         for sig, handler in previous.items():
                             loop.remove_signal_handler(sig)
                             signal.signal(sig, handler)
@@ -257,12 +253,34 @@ async def run(args):
                 interrupted = True
                 emit("采集已中断，正在导出已保存的数据。")
             finally:
+                # Include partial rounds and data beyond the current clock on
+                # recovery; never trim saved data before deleting its source.
                 manifest = export_run(store, args.out, format=args.format)
                 emit(f"{args.format} 数据与结果清单：{manifest}")
-            failures = [p for p in store.panel_statuses() if p.get("status") not in {"success", "empty", "no_data"}]
+            latest_saved_end = store.connection.execute(
+                "SELECT MAX(end_ms) FROM (SELECT end_ms FROM attempts "
+                "UNION ALL SELECT end_ms FROM display_updates)"
+            ).fetchone()[0]
+            target_end = max(target_end, int(plan["to_ms"]), latest_saved_end or target_end)
+            failures = [p for p in store.panel_statuses()
+                        if p["status"] not in {"success", "empty"}
+                        or store.display_coverage(p["panel_id"], int(plan["from_ms"]), target_end)["status"] != "covered"
+                        or any(q["status"] not in {"success", "empty"}
+                               or q["cursor_ms"] is None or q["cursor_ms"] < target_end
+                               for q in p["queries"])]
             if failures:
                 emit(f"{len(failures)} 个面板存在失败、部分结果或未完成状态，详见 manifest。")
-            return 130 if interrupted else (2 if failures else 0)
+            exit_code = 130 if interrupted else (2 if failures else 0)
+            if exit_code == 0:
+                cleanup_path = store.db_path
+    # Both the store and browser must close successfully before deleting state.
+    if cleanup_path is not None:
+        for suffix in ("", "-wal", "-shm"):
+            Path(str(cleanup_path) + suffix).unlink(missing_ok=True)
+        emit("采集和导出完整成功，已清理 collection.sqlite3 及其临时文件。")
+    else:
+        emit("已保留 collection.sqlite3；使用同一 --out 可恢复采集。")
+    return exit_code
 
 
 def main(argv=None):
@@ -273,7 +291,7 @@ def main(argv=None):
         print(f"错误：{exc}", file=sys.stderr)
         return_code = 1
     except KeyboardInterrupt:
-        print("已停止。已写入的数据可通过 export 命令导出。", file=sys.stderr)
+        print("已停止。使用同一 --out 可从保留的 SQLite 恢复采集。", file=sys.stderr)
         return_code = 130
     raise SystemExit(return_code)
 

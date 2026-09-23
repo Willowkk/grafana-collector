@@ -2,6 +2,13 @@
 
 Internal collection modules use JSON-serializable dictionaries. Timestamps are integer UTC milliseconds. Points are `[timestamp_ms, number_or_null]`. Export converts timestamps to Arrow UTC millisecond timestamps or Excel dates. Nonfinite collection values become null with quality metadata. No credentials are part of any dictionary below.
 
+## CLI lifecycle (0.4.0)
+Public commands are `login`, `inspect`, `fetch` and `watch`; there is no standalone `export` command. Fetch and watch automatically write the selected Parquet or XLSX output when collection ends. Exporter functions below remain internal APIs used by this lifecycle, not a separate CLI workflow.
+
+SQLite holds the frozen plan, normalized points, attempts and cursors during collection. Clean it up only after a complete successful fetch, or after watch reaches its requested duration/round count with complete successful collection, and the final output has been written successfully. Close the store before deleting the SQLite file and its `-wal`/`-shm` sidecars. Ctrl+C, SIGTERM, exceptions, partial/failed collection and export failure retain SQLite for recovery; an interrupted run must not be treated as a completed run merely because its current panels report success.
+
+A completed output directory cannot start another fetch/watch: fail with an instruction to choose a new directory, before interpreting a new relative time range or modifying the existing output. A recoverable run uses its saved SQLite plan without reinterpreting `now`. No upgrade operation deletes historical raw directories or rewrites existing samples.
+
 ## Series
 `{ref_id, metric, labels: dict[str,str], name, unit, points: list[[timestamp_ms,value]], ...optional metadata}`. A series identity includes query key and ALL sorted labels, metric, and ref_id, not just its legend. Export display series may include `series_id` supplied by storage.
 
@@ -22,11 +29,11 @@ Internal collection modules use JSON-serializable dictionaries. Timestamps are i
 
 ## storage.py and exporter.py (storage owner)
 `Store(run_dir)` creates/opens store; `close()`; `initialize(plan)`; `load_plan()`; `get_cursor(query_key) -> int|None`.
-`record_result(query, start_ms, end_ms, series, raw, *, status='success', error=None, observed_ms=None)` writes compressed raw response and transactionally upserts points + attempt + watermark; statuses success/empty advance watermark, failed do not. Clamp points to dataset start and requested end; query overlap may update existing points. Never advance watermark across an unqueried gap. Raw responses must not contain credentials.
+`record_result(query, start_ms, end_ms, series, raw, *, status='success', error=None, observed_ms=None)` transactionally upserts normalized points + attempt + watermark; statuses success/empty advance watermark, failed do not. The `raw` argument remains accepted for caller compatibility but its response body is not persisted; new attempts have `raw_path=NULL`. There is no raw-storage option and new runs do not create a raw directory. Clamp points to dataset start and requested end; query overlap may update existing points. Never advance watermark across an unqueried gap. Existing raw files and old attempt records are not rewritten.
 `get_query_series(query_key, start_ms=None, end_ms=None) -> list[Series]`.
 `record_display(panel_id, series, start_ms, end_ms)` stores/refreshes derived/display points for the collected range without losing unrelated historical data.
 `query_statuses() -> list[dict]`; `panel_statuses() -> list[dict]`; `get_display_series(panel_id,start_ms=None,end_ms=None)`.
-`export_run(store, out_dir, *, from_ms=None, to_ms=None, panel_ids=None) -> pathlib.Path` returns manifest path, includes all selected panel statuses and raw/query provenance, XLSX only for valid data/legitimate empty status; failures are not healthy empty files. Workbooks: one sheet, Time + legends, timezone Asia/Shanghai, collision-safe names and row/column splits.
+`export_run(store, out_dir, *, from_ms=None, to_ms=None, panel_ids=None) -> pathlib.Path` returns manifest path and includes all selected panel statuses and query provenance. XLSX is produced only for valid data/legitimate empty status; failures are not healthy empty files. Workbooks: one sheet, Time + legends, timezone Asia/Shanghai, collision-safe names and row/column splits.
 
 ## exporting.py and parquet_exporter.py
 `exporting.export_run(store, out_dir, *, format='parquet', from_ms=None, to_ms=None, panel_ids=None) -> pathlib.Path` dispatches to Parquet by default or the existing Excel exporter for `format='xlsx'`.
@@ -43,7 +50,7 @@ The v1 `source_metadata_json`, `group` and `panel_title` columns are removed. Ti
 
 The generation contains exactly five files: `points.parquet`, `series.parquet`, `manifest.json`, `provenance.json.gz` and `README.md`. `manifest.files` describes points, series, provenance and readme with relative paths, sizes and checksums. Manifest keeps dashboard and sampling summaries, variables, dataset/requested ranges and every selected panel's title, group, point/series counts, status and display coverage. Empty/failed/pending panels remain represented; file creation alone does not assert complete collection. Panel `query_keys` reference definitions in provenance, avoiding copies of full compiled queries in panel entries.
 
-`provenance.json.gz` retains the complete frozen dashboard, full sampling settings, raw response provenance and query/batch details. `queries` is keyed by query key, each value containing one `definition` plus the query's status/cursor/attempt records. `panels` is keyed by `str(panel_id)`, each value containing panel `metadata`, `transformations` and `query_keys`. Actual intervals are at `queries[key].definition.interval_ms`; explicit sampling settings also remain in the compiled definition and its `metadata`. The main manifest's sampling summary is not a substitute for those query settings. Raw response paths refer to the original run; raw response bodies are not bundled into the five-file generation. Provenance is query/batch-level; there is no promised per-point attempt ID. Snapshots replace earlier snapshots, not append-only change streams.
+`provenance.json.gz` retains the complete frozen dashboard, full sampling settings and query/batch details. New 0.4.0 generations set `raw_provenance` to null. `queries` is keyed by query key, each value containing one `definition` plus the query's status/cursor/attempt records; new attempts have no raw response path. `panels` is keyed by `str(panel_id)`, each value containing panel `metadata`, `transformations` and `query_keys`. Actual intervals are at `queries[key].definition.interval_ms`; explicit sampling settings also remain in the compiled definition and its `metadata`. The main manifest's sampling summary is not a substitute for those query settings. No raw response body is persisted or bundled. Provenance is query/batch-level; there is no promised per-point attempt ID. Snapshots replace earlier snapshots, not append-only change streams. Existing v2 packages may contain historical raw provenance and remain readable without modification.
 
 ## dataset.py and examples/read_parquet.py
 
@@ -51,14 +58,15 @@ The generation contains exactly five files: `points.parquet`, `series.parquet`, 
 
 `read_provenance(path) -> dict` reads full v2 provenance on demand. It follows `files.provenance.path`, validates a supplied checksum and schema/generation identity, and decompresses the sidecar. Only `schema_version=2` is supported; every other version fails explicitly. Ordinary point reads do not need full provenance. The example CLI forwards to the installed reader.
 
-The v1 sample is preserved only as a historical comparison; the current reader does not support it. SQLite storage is unchanged. To create v2 from an old run, use `export --run OLD_RUN --out NEW_DIRECTORY --format parquet` against its SQLite store; no browser login or source requery is needed. A Parquet-only package cannot be passed as the SQLite run directory. Old generations remain intact.
+The v1 sample is preserved only as a historical comparison; the current reader does not support it. Existing v2 packages remain readable, including their historical provenance fields, and old generations remain intact. Version 0.4.0 removes the CLI workflow for independently re-exporting old SQLite runs; such workflows need the corresponding older version. Recovery of an unfinished collection still uses its saved SQLite plan and progress, while new requests no longer persist raw responses.
 
 ## transport.py (root)
 `async transport.execute(query,start_ms,end_ms) -> object` uses query.build_request. Raises AuthenticationRequired, QueryError. `async transport.reauthenticate()` handles manual login wait; no parallel auth prompts. BrowserSession async context manager owns login profile, API request context, dashboard/datasource discovery and width measurement.
+Chrome launch includes `--disable-gpu`, `--disable-dev-shm-usage` and `--no-sandbox`. Their presence is a launch-configuration contract; it does not constitute live Chrome/Grafana acceptance evidence.
 
 ## engine.py (engine owner)
 `Collector(plan, store, transport, *, concurrency=4, timeout=30, retries=3, lookback_ms=300000, progress=None)`.
 `async collect_until(end_ms) -> dict` returns summary counts. Fetch uses plan.from_ms..plan.to_ms as ONE semantic window (do not break TopK); watch each query uses max(dataset_start, cursor-lookback) or dataset_start on first collection. Fully support no-history first start, per-query progress, retry, empty-vs-failed, auth pause and resume, frozen interval, partial result and derived dependency failures.
-`async watch(*, poll_interval_ms=300000, rounds=None, duration_seconds=None, stop_event=None) -> dict`: sleep until first due time if from=start; never overlap rounds; graceful cancellation saves state for CLI export. Tests use fake transport/clock where appropriate.
+`async watch(*, poll_interval_ms=300000, rounds=None, duration_seconds=None, stop_event=None) -> dict`: sleep until first due time if from=start; a duration deadline triggers a final round even before the first tick or between ticks. Never query past that deadline or overlap rounds. Return the stop reason and completed collection `end_ms`; graceful cancellation saves state for automatic output and later recovery. Export all saved data, including partial rounds and later timestamps retained across clock rollback. Cleanup additionally requires continuous display coverage and successful query cursors through the entire saved/requested range. Tests use fake transport/clock where appropriate.
 
 Root owns cli.py, transport.py, timeutil.py, package/build files, docs and integration. Owners may add their own tests; do not modify another owner's files without coordinating.

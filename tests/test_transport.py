@@ -3,6 +3,7 @@
 import asyncio
 import json
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -76,6 +77,31 @@ def session(*responses, headless=False, geometry=None):
     result.context = SimpleNamespace(request=Requests(responses))
     result.page = Page(geometry)
     return result
+
+
+@pytest.mark.parametrize("headless", [False, True])
+async def test_chrome_launch_keeps_profile_and_sampling_geometry_with_runtime_flags(tmp_path, monkeypatch, headless):
+    import playwright.async_api
+
+    page = Page()
+    context = SimpleNamespace(pages=[page], close=AsyncMock())
+    launch = AsyncMock(return_value=context)
+    runtime = SimpleNamespace(chromium=SimpleNamespace(launch_persistent_context=launch), stop=AsyncMock())
+    manager = SimpleNamespace(start=AsyncMock(return_value=runtime))
+    monkeypatch.setattr(playwright.async_api, "async_playwright", lambda: manager)
+    profile = tmp_path / "chrome-profile"
+
+    async with BrowserSession(URL, profile=profile, headless=headless) as browser:
+        assert browser.context is context and browser.page is page
+        launch.assert_awaited_once_with(
+            str(profile), channel="chrome", headless=headless,
+            viewport={"width": 1440, "height": 900}, locale="zh-CN",
+            timezone_id="Asia/Shanghai",
+            args=["--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox"],
+        )
+        assert profile.is_dir() and profile.stat().st_mode & 0o777 == 0o700
+    context.close.assert_awaited_once()
+    runtime.stop.assert_awaited_once()
 
 
 @pytest.mark.parametrize("route,expected", [

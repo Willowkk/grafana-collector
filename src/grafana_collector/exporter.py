@@ -193,7 +193,7 @@ def _export_run(store, out_dir, *, from_ms, to_ms, panel_ids, max_rows, max_colu
             "display": "Compatible units share a fixed scale per panel and selected export window; number formatting adjusts precision without changing numeric values",
             "missing": "Blank cells; no interpolation or zero filling",
         },
-        "raw_provenance": {"base_directory": str(store.run_dir), "format": "gzip JSON", "paths_in": "query_statuses[].attempts[].raw_path"},
+        "raw_provenance": None,
         "query_statuses": query_statuses,
         "panels": [],
     }

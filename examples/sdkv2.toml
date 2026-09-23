@@ -4,7 +4,7 @@ timeout = 30
 login_timeout = 600
 concurrency = 4
 retries = 3
-format = "parquet" # fetch/watch/export 的默认格式；人工查看可改为 xlsx
+format = "parquet" # fetch/watch 结束时自动输出；人工查看可改为 xlsx
 
 [fetch]
 out = "runs/history"
@@ -14,7 +14,4 @@ out = "runs/live"
 poll_interval = "5m"
 lookback = "5m"
 # since = "2026-09-17T10:00:00+08:00"  # 只有显式指定才补采启动前的历史
-
-[export]
-run = "runs/live"
-out = "runs/live"
+# duration = "1h"  # 限时完成且全部成功后清理 SQLite；Ctrl+C 停止则保留恢复进度

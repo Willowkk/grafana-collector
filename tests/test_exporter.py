@@ -74,7 +74,29 @@ def test_dates_numeric_outer_join_collision_names_and_failure_status(store, tmp_
     assert book.active["B1"].data_type == "s"
     assert book.active["B1"].value.startswith("=HYPERLINK")
     book.close()
-    assert manifest["query_statuses"][0]["attempts"][0]["raw_path"].endswith(".json.gz")
+    assert "raw_path" not in manifest["query_statuses"][0]["attempts"][0]
+    assert manifest["raw_provenance"] is None
+
+
+def test_legacy_raw_paths_are_omitted_without_changing_query_status(store, tmp_path):
+    plan = make_plan()
+    query = plan["panels"][0]["queries"][0]
+    samples = [series("a", [[1000, 5]])]
+    store.record_result(query, 1000, 4000, samples, {"response": "discarded"})
+    store.record_display(1, samples, 1000, 4000)
+    legacy_path = "raw/legacy-response.json.gz"
+    with store.connection:
+        store.connection.execute("UPDATE attempts SET raw_path=?", (legacy_path,))
+
+    manifest = load_manifest(export_run(store, tmp_path / "export", panel_ids=[1]))
+    saved_query = manifest["query_statuses"][0]
+    assert manifest["raw_provenance"] is None
+    assert saved_query["definition"] == query
+    assert saved_query["cursor_ms"] == 4000
+    assert saved_query["attempts"][0]["status"] == "success"
+    assert "raw_path" not in saved_query["attempts"][0]
+    assert legacy_path not in json.dumps(manifest)
+    assert store.connection.execute("SELECT raw_path FROM attempts").fetchone()[0] == legacy_path
 
 
 def test_split_rows_and_columns_keeps_exact_mapping(store, tmp_path):

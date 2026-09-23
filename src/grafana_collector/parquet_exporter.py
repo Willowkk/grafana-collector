@@ -172,7 +172,7 @@ def _sampling_summary(metadata):
     return {key: metadata[key] for key in keys if key in metadata}
 
 
-def _provenance(plan, panels, queries, generation, run_dir):
+def _provenance(plan, panels, queries, generation):
     # Local Math expressions have no transport status row, but still belong
     # to the frozen query graph and must remain resolvable from panel refs.
     definitions = {query["key"]: {"definition": query}
@@ -184,11 +184,7 @@ def _provenance(plan, panels, queries, generation, run_dir):
         "schema_name": SCHEMA_NAME, "schema_version": SCHEMA_VERSION,
         "generation": generation, "dashboard": plan["dashboard"],
         "sampling": plan.get("metadata", {}),
-        "raw_provenance": {
-            "base_directory": str(run_dir), "format": "gzip JSON",
-            "paths_in": "queries[query_key].attempts[].raw_path",
-            "point_to_attempt_mapping": False,
-        },
+        "raw_provenance": None,
         "queries": definitions,
         "panels": {str(panel["id"]): {
             "query_keys": [query["key"] for query in panel["queries"]],
@@ -303,12 +299,12 @@ for point in points.slice(0, 5).to_pylist():
 快照主键为 `(panel_id, series_id, time)`，不是采集事件流水；重叠修订只
 保留当前存储结果。series_id 不能代替跨运行的 run 身份。
 manifest 保留面板状态、范围、精简采样信息及文件索引；完整冻结看板、采样
-配置、查询定义、原始响应路径和批次状态保存在 `provenance.json.gz`。
+配置、查询定义和批次状态保存在 `provenance.json.gz`。
 `provenance.queries[query_key]` 保存一份 definition 和该查询的采集状态；
 `provenance.panels[str(panel_id)]` 保存转换、面板配置及 query_keys 引用。
 实际采样间隔见 queries[query_key].definition.interval_ms 及 metadata，
 其中 interval_ms=0 代表后端表达式决定采样，不能当作零秒采样。
-没有声称逐点对应某个原始响应批次。
+原始 HTTP 响应不落盘，raw_provenance 为 null，批次记录不包含原始响应路径。
 默认结果为面板显示层；网络查询输入未另行导出。
 
 manifest 的所有产物路径都相对它所在目录；外层和 generation 内均可独立
@@ -325,7 +321,7 @@ assert provenance["generation"] == manifest["generation"]
 ```
 
 项目的 grafana_collector.dataset.read_points/read_provenance 只接受协议 v2。
-已有运行结果可从原 SQLite 离线导出到新目录，无需重新采集。
+读取数据包无需采集时的 SQLite 或浏览器登录状态。
 """
 
 
@@ -443,7 +439,7 @@ def _export_run(store, out_dir, *, from_ms, to_ms, panel_ids):
             point_buffer.flush()
             series_buffer.flush()
         _write_provenance(staging / "provenance.json.gz",
-                          _provenance(plan, panels, queries, generation, store.run_dir))
+                          _provenance(plan, panels, queries, generation))
         (staging / "README.md").write_text(_readme(), encoding="utf-8")
         manifest["summary"] = dict(Counter(p["status"] for p in manifest["panels"]))
         manifest["files"] = {

@@ -104,6 +104,7 @@ class BrowserSession:
                 str(self.profile), channel="chrome", headless=self.headless,
                 viewport={"width": 1440, "height": 900}, locale="zh-CN",
                 timezone_id="Asia/Shanghai",
+                args=["--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox"],
             )
             self.page = self.context.pages[0] if self.context.pages else await self.context.new_page()
         except Exception as exc:

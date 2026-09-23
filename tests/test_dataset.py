@@ -68,6 +68,7 @@ def test_read_shipped_v2_sample_and_provenance():
     assert set(provenance["queries"]) == expected
     assert provenance["dashboard"]["uid"] == manifest["dashboard"]["uid"]
     assert all(provenance["sampling"][key] == value for key, value in manifest["sampling"].items())
+    # Historical v2 packages remain readable with their original raw references.
     assert provenance["raw_provenance"]["paths_in"] == "queries[query_key].attempts[].raw_path"
 
 
@@ -111,6 +112,10 @@ def test_copied_generation_keeps_full_provenance_without_original_run(snapshot, 
     assert original_provenance["sampling"] == plan["metadata"]
     assert original_provenance["variables"] == plan["variables"]
     assert original_provenance["queries"]["q2"]["definition"] == plan["panels"][0]["queries"][1]
+    assert original_provenance["raw_provenance"] is None
+    assert all("raw_path" not in attempt
+               for query in original_provenance["queries"].values()
+               for attempt in query.get("attempts", []))
     copied = tmp_path / "delivered"
     shutil.copytree((path.parent / manifest["generation_manifest"]).parent, copied)
     shutil.rmtree(path.parent)
@@ -159,8 +164,28 @@ def test_unsupported_manifest_versions_fail_explicitly(tmp_path, version):
             read(tmp_path)
 
 
-def test_sqlite_audit_checks_values_and_full_metadata(snapshot):
+@pytest.mark.parametrize("legacy_raw_provenance", [False, True])
+def test_sqlite_audit_checks_values_and_full_metadata(snapshot, legacy_raw_provenance):
     run, path, _ = snapshot
+    legacy_path = "raw/legacy-response.json.gz"
+    with Store(run) as store, store.connection:
+        store.connection.execute("UPDATE attempts SET raw_path=?", (legacy_path,))
+    if legacy_raw_provenance:
+        manifest = json.loads(path.read_text())
+        info = manifest["files"]["provenance"]
+        sidecar = path.parent / info["path"]
+        provenance = json.loads(gzip.decompress(sidecar.read_bytes()))
+        provenance["raw_provenance"] = {
+            "base_directory": str(run), "format": "gzip JSON",
+            "paths_in": "queries[query_key].attempts[].raw_path", "point_to_attempt_mapping": False,
+        }
+        for query in provenance["queries"].values():
+            for attempt in query.get("attempts", []):
+                attempt["raw_path"] = legacy_path
+        encoded = gzip.compress(json.dumps(provenance).encode())
+        sidecar.write_bytes(encoded)
+        info.update(sha256=hashlib.sha256(encoded).hexdigest(), size_bytes=len(encoded))
+        path.write_text(json.dumps(manifest))
     spec = importlib.util.spec_from_file_location("audit_parquet", ROOT / "scripts/audit_parquet.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -169,3 +194,7 @@ def test_sqlite_audit_checks_values_and_full_metadata(snapshot):
     assert result["source_points"] == result["exported_points"] == 5
     assert result["explicit_nulls"] == 1
     assert result["point_row_groups"] == result["series_row_groups"] == 1
+    if legacy_raw_provenance:
+        with Store(run) as store, store.connection:
+            store.connection.execute("UPDATE attempts SET raw_path='raw/changed.json.gz'")
+        assert "query attempts changed: q1" in module.audit(run, path)["failures"]

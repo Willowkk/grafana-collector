@@ -6,16 +6,13 @@ REAL so that the source's integers are not silently rounded before export.
 
 from __future__ import annotations
 
-import gzip
 from contextlib import contextmanager
 import hashlib
 import json
 import math
-import os
 from pathlib import Path
 import sqlite3
 import time
-import uuid
 
 
 _SECRET_KEYS = {"authorization", "cookie", "set-cookie", "password", "passwd",
@@ -52,8 +49,6 @@ class Store:
     def __init__(self, run_dir):
         self.run_dir = Path(run_dir).expanduser().resolve()
         self.run_dir.mkdir(parents=True, exist_ok=True)
-        self.raw_dir = self.run_dir / "raw"
-        self.raw_dir.mkdir(exist_ok=True)
         self.db_path = self.run_dir / "collection.sqlite3"
         self.connection = sqlite3.connect(self.db_path)
         self.connection.row_factory = sqlite3.Row
@@ -98,7 +93,7 @@ class Store:
 
     @contextmanager
     def read_snapshot(self):
-        """Keep an offline export internally consistent while collection continues."""
+        """Keep an export internally consistent while collection continues."""
         owns_transaction = not self.connection.in_transaction
         if owns_transaction:
             self.connection.execute("BEGIN")
@@ -186,6 +181,7 @@ class Store:
                                 (boundary if covered else None, query_key))
 
     def record_result(self, query, start_ms, end_ms, series, raw, *, status="success", error=None, observed_ms=None):
+        """Persist normalized results; raw is accepted for caller compatibility only."""
         status = {"no_data": "empty", "error": "failed"}.get(status, status)
         if status not in {"success", "empty", "failed", "unsupported"}:
             raise ValueError(f"Unknown query status: {status}")
@@ -200,43 +196,27 @@ class Store:
             raise ValueError("Query differs from this run's frozen definition")
         dataset_start = int(self.load_plan()["from_ms"])
         observed_ms = _now() if observed_ms is None else int(observed_ms)
-        raw_path = None
-        if raw is not None:
-            raw_path = f"raw/{_digest(query['key'])[:16]}-{uuid.uuid4().hex}.json.gz"
-            path = self.run_dir / raw_path
-            temporary = path.with_suffix(".tmp")
-            try:
-                with gzip.open(temporary, "wt", encoding="utf-8") as output:
-                    output.write(_json(raw))
-                with temporary.open("rb") as output:
-                    os.fsync(output.fileno())
-                os.replace(temporary, path)
-            finally:
-                temporary.unlink(missing_ok=True)
-        try:
-            with self.connection:
-                quality = {"nonfinite_points": 0, "out_of_range_points": 0}
-                if status in {"success", "empty"}:
-                    # The response is authoritative for this queried window.
-                    # This removes vanished TopK members and genuinely empty
-                    # ranges without mixing old curves into current expressions.
-                    # Failed attempts never enter this branch.
-                    self.connection.execute(
-                        "DELETE FROM points WHERE series_id IN "
-                        "(SELECT id FROM series WHERE owner_kind='query' AND owner_key=?) "
-                        "AND timestamp_ms>=? AND timestamp_ms<=? AND observed_ms<=?",
-                        (query["key"], max(dataset_start, start_ms), end_ms, observed_ms))
-                    quality = self._upsert_series("query", query["key"], series,
-                                                  max(dataset_start, start_ms), end_ms, observed_ms)
+        with self.connection:
+            quality = {"nonfinite_points": 0, "out_of_range_points": 0}
+            if status in {"success", "empty"}:
+                # The response is authoritative for this queried window.
+                # This removes vanished TopK members and genuinely empty
+                # ranges without mixing old curves into current expressions.
+                # Failed attempts never enter this branch.
                 self.connection.execute(
-                    "INSERT INTO attempts(query_key,start_ms,end_ms,status,error,observed_ms,raw_path,quality) "
-                    "VALUES (?,?,?,?,?,?,?,?)",
-                    (query["key"], start_ms, end_ms, status, error, observed_ms, raw_path, _json(quality)))
-                self._advance_cursor(query["key"], dataset_start)
-        except BaseException:
-            if raw_path:
-                (self.run_dir / raw_path).unlink(missing_ok=True)
-            raise
+                    "DELETE FROM points WHERE series_id IN "
+                    "(SELECT id FROM series WHERE owner_kind='query' AND owner_key=?) "
+                    "AND timestamp_ms>=? AND timestamp_ms<=? AND observed_ms<=?",
+                    (query["key"], max(dataset_start, start_ms), end_ms, observed_ms))
+                quality = self._upsert_series("query", query["key"], series,
+                                              max(dataset_start, start_ms), end_ms, observed_ms)
+            # Keep the legacy column so existing SQLite runs can resume without
+            # migration, but never retain raw responses or new raw paths.
+            self.connection.execute(
+                "INSERT INTO attempts(query_key,start_ms,end_ms,status,error,observed_ms,raw_path,quality) "
+                "VALUES (?,?,?,?,?,?,?,?)",
+                (query["key"], start_ms, end_ms, status, error, observed_ms, None, _json(quality)))
+            self._advance_cursor(query["key"], dataset_start)
 
     def _read_series(self, kind, owner, start_ms=None, end_ms=None):
         result = []
@@ -325,6 +305,9 @@ class Store:
             attempts = [dict(a) for a in self.connection.execute(
                 "SELECT * FROM attempts WHERE query_key=? ORDER BY id", (row["key"],))]
             for attempt in attempts:
+                # Old runs may still contain raw paths. They are legacy local
+                # artifacts, not part of the current result/provenance contract.
+                attempt.pop("raw_path", None)
                 attempt["quality"] = json.loads(attempt["quality"])
             latest = attempts[-1] if attempts else {}
             result.append({"key": row["key"], "query_key": row["key"], "panel_id": query["panel_id"],

@@ -92,8 +92,8 @@ def test_typed_long_table_uses_display_values_preserves_nulls_ids_labels_and_utc
     assert manifest["exporter"]["version"] == __version__
     assert manifest["schema_name"] == "sdkv2-grafana-parquet" and manifest["schema_version"] == 2
     provenance = read_provenance(path)
-    assert provenance["queries"]["q1"]["attempts"][0]["raw_path"].endswith(".json.gz")
-    assert provenance["raw_provenance"]["point_to_attempt_mapping"] is False
+    assert "raw_path" not in provenance["queries"]["q1"]["attempts"][0]
+    assert provenance["raw_provenance"] is None
     assert store.get_display_series(1) == before
 
 
@@ -358,6 +358,33 @@ def test_v2_keeps_unique_source_attributes_and_normalizes_shared_provenance(stor
         "query_keys": ["q1"], "metadata": plan["panels"][0]["metadata"], "transformations": []}
     # Main-manifest references resolve even when exporting only a subrange.
     assert set(manifest["panels"][0]["query_keys"]) <= provenance["queries"].keys()
+
+
+def test_legacy_raw_paths_are_omitted_without_changing_query_provenance(store, tmp_path):
+    plan = make_plan()
+    query = plan["panels"][0]["queries"][0]
+    samples = [series([[START, 5]])]
+    store.record_result(query, START, END, samples, {"response": "discarded"})
+    store.record_display(1, samples, START, END)
+    legacy_path = "raw/legacy-response.json.gz"
+    with store.connection:
+        store.connection.execute("UPDATE attempts SET raw_path=?", (legacy_path,))
+
+    path = export_run(store, tmp_path / "export", panel_ids=[1])
+    manifest, points, _ = read_export(path)
+    provenance = read_provenance(path)
+    saved_query = provenance["queries"]["q1"]
+    assert provenance["raw_provenance"] is None
+    assert saved_query["definition"] == query
+    assert saved_query["cursor_ms"] == END
+    assert saved_query["attempts"][0]["status"] == "success"
+    assert "raw_path" not in saved_query["attempts"][0]
+    assert legacy_path not in json.dumps(provenance)
+    assert points["value"].to_pylist() == [5.0]
+    assert store.connection.execute("SELECT raw_path FROM attempts").fetchone()[0] == legacy_path
+    readme = (path.parent / manifest["files"]["readme"]["path"]).read_text(encoding="utf-8")
+    assert "原始 HTTP 响应不落盘" in readme
+    assert "离线导出" not in readme
 
 
 def test_small_panels_share_row_groups_and_preserve_all_points(store, tmp_path, monkeypatch):
